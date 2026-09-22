@@ -1,0 +1,1973 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#2d6a4f">
+<link rel="manifest" href="manifest.json">
+<title>Scadenze</title>
+<style>
+:root {
+  --primary:       #2d6a4f;
+  --primary-light: #52b788;
+  --primary-pale:  #d8f3dc;
+  --accent:        #f77f00;
+  --bg:            #f0f4f1;
+  --green:         #2d9e5f;
+  --red:           #e05252;
+  --muted:         #8aab96;
+  --warn:          #f4a261;
+  --surface:       #ffffff;
+  --text:          #1a2e22;
+  --text2:         #4a6457;
+  --radius:        12px;
+  --shadow:        0 2px 8px rgba(0,0,0,.10);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; padding-bottom: 80px; }
+
+/* APPBAR */
+#appbar { background: var(--primary); color: #fff; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; height: 56px; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 6px rgba(0,0,0,.2); }
+#appbar .title { font-size: 1.1rem; font-weight: 700; letter-spacing: .3px; }
+#appbar .right { display: flex; align-items: center; gap: 10px; }
+#sync-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--muted); transition: background .4s; }
+#sync-dot.ok { background: #69d98d; }
+#sync-dot.saving { background: var(--accent); }
+#btn-back { background: none; border: none; color: #fff; font-size: 1.4rem; cursor: pointer; display: none; padding: 4px 8px; }
+
+/* BANNER */
+#banner-update { background: var(--accent); color: #fff; display: none; align-items: center; justify-content: space-between; padding: 8px 16px; font-size: .85rem; font-weight: 600; }
+#banner-update button { background: #fff; color: var(--accent); border: none; border-radius: 6px; padding: 4px 10px; font-weight: 700; cursor: pointer; }
+#banner-archivio { background: #fff3cd; color: #856404; display: none; align-items: center; justify-content: space-between; padding: 8px 16px; font-size: .85rem; font-weight: 600; }
+
+/* CHIP ANNI */
+#chip-anni { display: flex; gap: 8px; padding: 10px 16px 0; overflow-x: auto; scrollbar-width: none; }
+#chip-anni::-webkit-scrollbar { display: none; }
+.chip-anno { padding: 4px 14px; border-radius: 20px; border: 2px solid var(--primary-light); background: var(--surface); color: var(--primary); font-size: .82rem; font-weight: 600; cursor: pointer; white-space: nowrap; transition: all .2s; }
+.chip-anno.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+/* TAB BAR */
+#tabbar { position: fixed; bottom: 0; left: 0; right: 0; z-index: 100; background: var(--surface); border-top: 1px solid #dde8e1; display: flex; height: 60px; box-shadow: 0 -2px 8px rgba(0,0,0,.08); }
+.tab-btn { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border: none; background: none; cursor: pointer; font-size: .65rem; font-weight: 600; color: var(--muted); transition: color .2s; }
+.tab-btn .icon { font-size: 1.3rem; }
+.tab-btn.active { color: var(--primary); }
+
+/* CONTENT */
+#content { padding: 12px 12px 0; }
+
+/* GRIGLIA MESI */
+#griglia-mesi { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.box-mese { background: var(--surface); border-radius: var(--radius); padding: 10px; cursor: pointer; box-shadow: var(--shadow); transition: transform .15s; border: 2px solid transparent; min-height: 90px; }
+.box-mese:active { transform: scale(.97); }
+.box-mese.has-data { border-color: var(--primary-pale); }
+.box-mese .nome { font-size: .8rem; font-weight: 700; color: var(--primary); margin-bottom: 6px; text-transform: uppercase; letter-spacing: .5px; }
+.box-mese .riga { font-size: .73rem; color: var(--text2); display: flex; align-items: center; gap: 4px; }
+.box-mese .riga + .riga { margin-top: 3px; }
+.box-mese .num { font-weight: 700; }
+.box-mese.mese-corrente { border-color: var(--primary-light); background: var(--primary-pale); }
+
+/* DETTAGLIO MESE */
+#dettaglio-mese { display: none; }
+.sezione-titolo { font-size: .8rem; font-weight: 700; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); margin: 16px 0 8px; display: flex; align-items: center; gap: 6px; }
+.sezione-titolo .cnt { background: var(--primary); color: #fff; border-radius: 10px; padding: 1px 7px; font-size: .72rem; }
+
+/* CARD SCADENZA */
+.card-scad { background: var(--surface); border-radius: var(--radius); padding: 12px 14px; margin-bottom: 8px; box-shadow: var(--shadow); display: flex; align-items: flex-start; gap: 12px; }
+.card-scad .data-badge { background: var(--primary); color: #fff; border-radius: 8px; padding: 4px 8px; font-size: .8rem; font-weight: 700; white-space: nowrap; min-width: 38px; text-align: center; }
+.card-scad.urgente .data-badge { background: var(--red); }
+.card-scad .body { flex: 1; }
+.card-scad .titolo { font-weight: 700; font-size: .9rem; }
+.card-scad .cliente { font-size: .78rem; color: var(--muted); margin-top: 2px; }
+.card-scad .note-text { font-size: .75rem; color: var(--text2); margin-top: 4px; font-style: italic; }
+.btn-icon { background: none; border: none; cursor: pointer; font-size: 1.1rem; padding: 2px 4px; }
+
+/* CARD FATTURA */
+.card-fatt { background: var(--surface); border-radius: var(--radius); padding: 12px 14px; margin-bottom: 8px; box-shadow: var(--shadow); display: flex; align-items: center; gap: 10px; }
+.card-fatt .left { flex: 1; }
+.card-fatt .num-fatt { font-weight: 700; font-size: .85rem; color: var(--primary); }
+.card-fatt .cliente-fatt { font-size: .78rem; color: var(--muted); }
+.card-fatt .note-fatt { font-size: .75rem; color: var(--text2); margin-top: 3px; font-style: italic; }
+.card-fatt .right { text-align: right; }
+.card-fatt .importo { font-weight: 700; font-size: .95rem; }
+.badge-stato { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: .7rem; font-weight: 700; margin-top: 4px; }
+.badge-stato.emessa  { background: var(--primary-pale); color: var(--primary); }
+.badge-stato.attesa  { background: #fde9d3; color: #b85c00; }
+.badge-stato.pagata  { background: #d4f5e3; color: #1a6e3c; }
+.badge-stato.parziale { background: #fff3cd; color: #856404; }
+.badge-stato.saldato  { background: #d4f5e3; color: #1a6e3c; }
+.badge-stato.nonpagato { background: #fde9d3; color: #b85c00; }
+
+/* CARD PREVENTIVO */
+.card-prev { background: var(--surface); border-radius: var(--radius); padding: 14px; margin-bottom: 10px; box-shadow: var(--shadow); cursor: pointer; }
+.card-prev:active { transform: scale(.98); }
+.card-prev .header-prev { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
+.card-prev .titolo-prev { font-weight: 700; font-size: .92rem; }
+.card-prev .cliente-prev { font-size: .78rem; color: var(--muted); margin-top: 2px; }
+.card-prev .totale-prev { font-weight: 800; font-size: 1rem; color: var(--primary); text-align: right; }
+.card-prev .sub-prev { font-size: .72rem; color: var(--muted); }
+.prev-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; }
+.residuo-prev { font-size: .78rem; color: var(--red); font-weight: 600; }
+
+/* DETTAGLIO PREVENTIVO */
+#dettaglio-prev { display: none; }
+.voce-row { background: var(--surface); border-radius: 8px; padding: 10px 12px; margin-bottom: 6px; box-shadow: var(--shadow); }
+.voce-row .voce-nome { font-size: .85rem; font-weight: 600; }
+.voce-row .voce-importo { font-size: .9rem; font-weight: 700; color: var(--primary); }
+.voce-row .voce-header { display: flex; justify-content: space-between; align-items: center; }
+.subvoce-row { background: var(--bg); border-radius: 6px; padding: 7px 10px; margin: 5px 0 0 12px; display: flex; justify-content: space-between; align-items: center; }
+.subvoce-row .sv-nome { font-size: .78rem; color: var(--text2); }
+.subvoce-row .sv-imp  { font-size: .8rem; font-weight: 700; color: var(--text2); }
+.totale-prev-box { background: var(--primary); color: #fff; border-radius: 10px; padding: 12px 16px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
+.totale-prev-box .label { font-size: .8rem; opacity: .8; }
+.totale-prev-box .valore { font-size: 1.1rem; font-weight: 800; }
+.pagamento-box { background: var(--surface); border-radius: 10px; padding: 12px 14px; margin-bottom: 12px; box-shadow: var(--shadow); }
+.pagamento-box .pg-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.pagamento-box .pg-label { font-size: .8rem; color: var(--muted); font-weight: 600; }
+.pagamento-box .pg-val { font-size: .88rem; font-weight: 700; }
+
+/* CARD COMMESSA */
+.card-comm { background: var(--surface); border-radius: var(--radius); padding: 14px; margin-bottom: 10px; box-shadow: var(--shadow); cursor: pointer; }
+.card-comm:active { transform: scale(.98); }
+.card-comm .titolo-comm { font-weight: 700; font-size: .92rem; }
+.card-comm .cliente-comm { font-size: .78rem; color: var(--muted); margin-top: 2px; }
+.comm-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; flex-wrap: wrap; gap: 4px; }
+.badge-comm { display: inline-block; padding: 2px 10px; border-radius: 10px; font-size: .72rem; font-weight: 700; }
+.badge-comm.da-iniziare { background: #eef0f2; color: #555; }
+.badge-comm.in-corso  { background: #fff3cd; color: #856404; }
+.badge-comm.da-fatturare { background: #fde9d3; color: #b85c00; }
+.badge-comm.chiusa    { background: #d4f5e3; color: #1a6e3c; }
+/* keep old aliases */
+.badge-comm.aperta    { background: var(--primary-pale); color: var(--primary); }
+.badge-comm.completata { background: #d4f5e3; color: #1a6e3c; }
+/* stato preventivo */
+.badge-stato.inviato  { background: var(--primary-pale); color: var(--primary); }
+.badge-stato.accettato { background: #d4f5e3; color: #1a6e3c; }
+.badge-stato.respinto  { background: #fde9d3; color: #b85c00; }
+.badge-stato.in-attesa { background: #fff3cd; color: #856404; }
+.ore-badge { font-size: .75rem; color: var(--muted); font-weight: 600; }
+
+/* DETTAGLIO COMMESSA */
+#dettaglio-comm { display: none; }
+.fase-card { background: var(--surface); border-radius: 10px; padding: 12px 14px; margin-bottom: 8px; box-shadow: var(--shadow); }
+.fase-card .fase-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+.fase-card .fase-nome { font-weight: 700; font-size: .88rem; }
+.fase-card .fase-ore { font-size: .78rem; color: var(--muted); font-weight: 600; }
+.fase-card .fase-desc { font-size: .78rem; color: var(--text2); margin-top: 3px; }
+.attiv-row { background: var(--bg); border-radius: 6px; padding: 7px 10px; margin: 6px 0 0 10px; display: flex; justify-content: space-between; align-items: center; }
+.attiv-row .at-nome { font-size: .78rem; color: var(--text2); }
+.attiv-row .at-ore  { font-size: .76rem; color: var(--muted); font-weight: 600; }
+.prev-collegati { background: var(--primary-pale); border-radius: 8px; padding: 8px 12px; margin-bottom: 10px; }
+.prev-collegati .label { font-size: .72rem; color: var(--primary); font-weight: 700; margin-bottom: 4px; }
+.prev-chip { display: inline-block; background: var(--primary); color: #fff; border-radius: 6px; padding: 2px 8px; font-size: .72rem; font-weight: 600; margin: 2px; }
+
+/* TAB FATTURE */
+#tab-fatture { display: none; }
+.filter-bar { display: flex; gap: 8px; margin-bottom: 12px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+.filter-bar::-webkit-scrollbar { display: none; }
+.chip-filter { padding: 5px 14px; border-radius: 20px; border: 2px solid #dde8e1; background: var(--surface); color: var(--text2); font-size: .78rem; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.chip-filter.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+.totali-bar { background: var(--surface); border-radius: var(--radius); padding: 12px 16px; margin-bottom: 12px; box-shadow: var(--shadow); display: flex; gap: 12px; flex-wrap: wrap; }
+.totale-item { flex: 1; min-width: 80px; }
+.totale-item .label { font-size: .7rem; color: var(--muted); font-weight: 600; text-transform: uppercase; }
+.totale-item .valore { font-size: 1rem; font-weight: 700; margin-top: 2px; }
+.totale-item .valore.green { color: var(--green); }
+.totale-item .valore.warn  { color: var(--warn); }
+
+/* TAB PREVENTIVI / COMMESSE */
+#tab-preventivi { display: none; }
+#tab-commesse   { display: none; }
+
+/* FAB */
+#fab { position: fixed; bottom: 72px; right: 16px; z-index: 200; width: 54px; height: 54px; border-radius: 50%; background: var(--accent); color: #fff; border: none; font-size: 1.6rem; box-shadow: 0 4px 14px rgba(247,127,0,.4); cursor: pointer; display: none; align-items: center; justify-content: center; transition: transform .15s; }
+#fab:active { transform: scale(.93); }
+#fab-menu { position: fixed; bottom: 134px; right: 16px; z-index: 300; display: none; flex-direction: column; gap: 10px; align-items: flex-end; }
+.fab-menu-item { display: flex; align-items: center; gap: 8px; }
+.fab-menu-item .fab-label { background: var(--text); color: #fff; padding: 5px 10px; border-radius: 6px; font-size: .8rem; font-weight: 600; }
+.fab-mini { width: 42px; height: 42px; border-radius: 50%; border: none; background: var(--primary); color: #fff; font-size: 1.1rem; cursor: pointer; box-shadow: var(--shadow); display: flex; align-items: center; justify-content: center; }
+
+/* MODAL */
+.modal-overlay { position: fixed; inset: 0; z-index: 500; background: rgba(0,0,0,.45); display: none; align-items: flex-end; }
+.modal-overlay.open { display: flex; }
+.modal-box { background: var(--surface); border-radius: 18px 18px 0 0; width: 100%; max-height: 90vh; overflow-y: auto; padding: 20px 16px 32px; animation: slideUp .25s ease; }
+@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+.modal-title { font-size: 1rem; font-weight: 700; color: var(--primary); margin-bottom: 16px; }
+.campo { margin-bottom: 12px; }
+.campo label { display: block; font-size: .78rem; font-weight: 600; color: var(--text2); margin-bottom: 4px; }
+.campo input, .campo textarea, .campo select { width: 100%; padding: 10px 12px; border: 1.5px solid #cdd8d2; border-radius: 8px; font-size: .9rem; background: var(--bg); color: var(--text); outline: none; font-family: inherit; }
+.campo input:focus, .campo textarea:focus, .campo select:focus { border-color: var(--primary); }
+.campo textarea { resize: vertical; min-height: 60px; }
+.btn-row { display: flex; gap: 10px; margin-top: 16px; }
+.btn-primary   { flex: 1; padding: 12px; border-radius: 10px; border: none; background: var(--primary); color: #fff; font-size: .9rem; font-weight: 700; cursor: pointer; }
+.btn-secondary { padding: 12px 18px; border-radius: 10px; border: 2px solid var(--primary); background: none; color: var(--primary); font-size: .9rem; font-weight: 700; cursor: pointer; }
+.btn-danger    { padding: 12px 18px; border-radius: 10px; border: none; background: var(--red); color: #fff; font-size: .9rem; font-weight: 700; cursor: pointer; }
+.btn-outline-sm { padding: 5px 12px; border-radius: 8px; border: 1.5px solid var(--primary); background: none; color: var(--primary); font-size: .78rem; font-weight: 600; cursor: pointer; }
+
+/* SEZIONE VOCI MODALE */
+.voci-modal-list { margin-bottom: 8px; }
+.voci-modal-item { background: var(--bg); border-radius: 8px; padding: 8px 10px; margin-bottom: 6px; }
+.voci-modal-item .vm-header { display: flex; justify-content: space-between; align-items: center; }
+.voci-modal-item .vm-nome { font-size: .83rem; font-weight: 600; }
+.voci-modal-item .vm-imp  { font-size: .85rem; font-weight: 700; color: var(--primary); }
+.subvoci-modal { margin-top: 5px; }
+.subvoci-modal-item { display: flex; justify-content: space-between; align-items: center; background: var(--surface); border-radius: 6px; padding: 5px 8px; margin-bottom: 4px; }
+.subvoci-modal-item .sv-nm { font-size: .76rem; color: var(--text2); }
+.subvoci-modal-item .sv-im { font-size: .78rem; font-weight: 600; }
+
+/* LOGIN */
+#login-overlay { position: fixed; inset: 0; z-index: 900; background: var(--bg); display: flex; align-items: center; justify-content: center; padding: 24px; }
+#login-box { background: var(--surface); border-radius: 16px; padding: 28px 20px; width: 100%; max-width: 360px; box-shadow: var(--shadow); }
+#login-box h2 { font-size: 1.1rem; color: var(--primary); margin-bottom: 4px; }
+#login-box p  { font-size: .8rem; color: var(--muted); margin-bottom: 18px; }
+#login-error  { color: var(--red); font-size: .8rem; margin-top: 8px; display: none; }
+
+/* GESTIONE VOCI ELENCO */
+#tab-impostazioni { display: none; }
+.elenco-voce-row { background: var(--surface); border-radius: 8px; padding: 10px 12px; margin-bottom: 6px; box-shadow: var(--shadow); display: flex; justify-content: space-between; align-items: center; }
+.elenco-voce-row .ev-nome { font-size: .85rem; font-weight: 600; }
+
+.empty { text-align: center; color: var(--muted); padding: 24px 0; font-size: .85rem; }
+.divider { height: 1px; background: #e8eeeb; margin: 8px 0; }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-overlay">
+  <div id="login-box">
+    <h2>📅 Scadenze</h2>
+    <p>Inserisci le credenziali per accedere</p>
+    <div class="campo"><label>Email</label><input type="email" id="login-email" placeholder="tua@email.com" autocomplete="email"></div>
+    <div class="campo"><label>Password</label><input type="password" id="login-pwd" placeholder="••••••••" autocomplete="current-password"></div>
+    <div class="btn-row"><button class="btn-primary" onclick="doLogin()">Accedi</button></div>
+    <div id="login-error"></div>
+  </div>
+</div>
+
+<!-- APPBAR -->
+<div id="appbar">
+  <div style="display:flex;align-items:center;gap:8px">
+    <button id="btn-back" onclick="goBack()">‹</button>
+    <span class="title" id="app-title">📅 Scadenze</span>
+    <span style="font-size:.65rem;color:rgba(255,255,255,.6);font-weight:500" id="app-version"></span>
+  </div>
+  <div class="right">
+    <div id="sync-dot"></div>
+  </div>
+</div>
+
+<div id="banner-update"><span>Nuova versione disponibile</span><button onclick="aggiornaApp()">Aggiorna</button></div>
+<div id="banner-archivio"><span id="banner-archivio-txt">📦 Modalità archivio</span><button onclick="esciArchivio()" style="background:#856404;color:#fff;border:none;border-radius:6px;padding:4px 10px;font-weight:700;cursor:pointer">↩️ Esci</button></div>
+
+<div id="chip-anni"></div>
+
+<div id="content">
+  <!-- TAB MESI -->
+  <div id="tab-mesi">
+    <div id="griglia-mesi"></div>
+    <div id="dettaglio-mese">
+      <div class="sezione-titolo">📌 Scadenze <span class="cnt" id="cnt-scad">0</span></div>
+      <div id="lista-scadenze"></div>
+      <div class="sezione-titolo">🧾 Fatture <span class="cnt" id="cnt-fatt-det">0</span></div>
+      <div id="lista-fatture-det"></div>
+    </div>
+  </div>
+
+  <!-- TAB FATTURE -->
+  <div id="tab-fatture">
+    <div class="totali-bar">
+      <div class="totale-item"><div class="label">Emesse</div><div class="valore" id="tot-emesse">€0</div></div>
+      <div class="totale-item"><div class="label">In attesa</div><div class="valore warn" id="tot-attesa">€0</div></div>
+      <div class="totale-item"><div class="label">Pagate</div><div class="valore green" id="tot-pagate">€0</div></div>
+    </div>
+    <div class="filter-bar" id="filter-stato">
+      <div class="chip-filter active" data-v="tutti" onclick="setFiltroStato(this)">Tutte</div>
+      <div class="chip-filter" data-v="emessa" onclick="setFiltroStato(this)">Emessa</div>
+      <div class="chip-filter" data-v="attesa" onclick="setFiltroStato(this)">In attesa</div>
+      <div class="chip-filter" data-v="pagata" onclick="setFiltroStato(this)">Pagata</div>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:8px;align-items:center;flex-wrap:wrap">
+      <select id="filter-cliente-fatt" onchange="renderTabFatture()" style="flex:1;padding:6px 10px;border-radius:8px;border:1.5px solid #cdd8d2;font-size:.8rem;background:var(--surface);color:var(--text)">
+        <option value="">👤 Tutti i clienti</option>
+      </select>
+      <select id="sort-fatt" onchange="renderTabFatture()" style="padding:6px 10px;border-radius:8px;border:1.5px solid #cdd8d2;font-size:.8rem;background:var(--surface);color:var(--text)">
+        <option value="data-desc">Data ↓</option>
+        <option value="data-asc">Data ↑</option>
+        <option value="cliente-asc">Cliente A-Z</option>
+        <option value="cliente-desc">Cliente Z-A</option>
+        <option value="importo-desc">Importo ↓</option>
+        <option value="importo-asc">Importo ↑</option>
+      </select>
+      <button class="btn-outline-sm" onclick="exportFattureExcel()">📊 Excel</button>
+      <button class="btn-outline-sm" onclick="exportFatturePDF()">📄 PDF</button>
+    </div>
+    <div id="lista-fatture-tab"></div>
+  </div>
+
+  <!-- TAB PREVENTIVI -->
+  <div id="tab-preventivi">
+    <div id="prev-export-bar" style="display:none;gap:8px;margin-bottom:8px"></div>
+    <div id="lista-preventivi"></div>
+    <div id="dettaglio-prev">
+      <div id="prev-totale-box"></div>
+      <div id="prev-pagamento-box"></div>
+      <div class="sezione-titolo">📋 Voci</div>
+      <div id="prev-voci-list"></div>
+    </div>
+  </div>
+
+  <!-- TAB COMMESSE -->
+  <div id="tab-commesse">
+    <div class="filter-bar" id="filter-comm">
+      <div class="chip-filter active" data-v="tutti" onclick="setFiltroComm(this)">Tutte</div>
+      <div class="chip-filter" data-v="da-iniziare" onclick="setFiltroComm(this)">Da iniziare</div>
+      <div class="chip-filter" data-v="in-corso"  onclick="setFiltroComm(this)">In corso</div>
+      <div class="chip-filter" data-v="da-fatturare" onclick="setFiltroComm(this)">Da fatturare</div>
+      <div class="chip-filter" data-v="chiusa" onclick="setFiltroComm(this)">Chiusa</div>
+    </div>
+    <div id="lista-commesse"></div>
+    <div id="dettaglio-comm">
+      <div id="comm-prev-collegati"></div>
+      <div id="comm-fatt-collegate"></div>
+      <div id="comm-ore-box"></div>
+      <div class="sezione-titolo">🔧 Fasi e attività <span class="cnt" id="cnt-fasi">0</span></div>
+      <div id="comm-fasi-list"></div>
+    </div>
+  </div>
+
+  <!-- TAB IMPOSTAZIONI -->
+  <div id="tab-impostazioni">
+    <div class="sezione-titolo">📋 Voci preventivo</div>
+    <div id="elenco-voci-list"></div>
+    <button class="btn-outline-sm" style="margin-top:4px" onclick="apriModalNuovaVoce()">+ Aggiungi voce</button>
+  </div>
+</div>
+
+<!-- TAB BAR -->
+<div id="tabbar">
+  <button class="tab-btn active" id="tbtn-mesi"       onclick="setTab('mesi')">      <span class="icon">📋</span>Mesi</button>
+  <button class="tab-btn"        id="tbtn-fatture"    onclick="setTab('fatture')">   <span class="icon">🧾</span>Fatture</button>
+  <button class="tab-btn"        id="tbtn-preventivi" onclick="setTab('preventivi')"><span class="icon">📝</span>Preventivi</button>
+  <button class="tab-btn"        id="tbtn-commesse"   onclick="setTab('commesse')">  <span class="icon">🔧</span>Commesse</button>
+  <button class="tab-btn"        id="tbtn-impost"     onclick="setTab('impostazioni')"><span class="icon">⚙️</span>Imposta</button>
+</div>
+
+<!-- FAB -->
+<button id="fab" onclick="toggleFabMenu()">+</button>
+<div id="fab-menu"></div>
+
+<!-- ═══ MODALI ═══ -->
+
+<!-- MODAL SCADENZA -->
+<div class="modal-overlay" id="modal-scad">
+  <div class="modal-box">
+    <div class="modal-title" id="modal-scad-title">Nuova scadenza</div>
+    <div class="campo"><label>Progetto / Titolo</label><input type="text" id="s-titolo" placeholder="Nome progetto"></div>
+    <div class="campo"><label>Cliente</label><input type="text" id="s-cliente"></div>
+    <div class="campo"><label>Data consegna</label><input type="date" id="s-data"></div>
+    <div class="campo"><label>Commessa collegata</label>
+      <select id="s-commessa">
+        <option value="">— nessuna —</option>
+      </select>
+    </div>
+    <div class="campo"><label>Note</label><textarea id="s-note"></textarea></div>
+    <div class="btn-row">
+      <button class="btn-secondary" onclick="chiudiModal('modal-scad')">Annulla</button>
+      <button id="btn-del-scad" class="btn-danger" style="display:none" onclick="eliminaScad()">Elimina</button>
+      <button class="btn-primary" onclick="salvaScad()">Salva</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL FATTURA -->
+<div class="modal-overlay" id="modal-fatt">
+  <div class="modal-box">
+    <div class="modal-title" id="modal-fatt-title">Nuova fattura</div>
+    <div class="campo"><label>ID / Numero fattura</label><input type="text" id="f-numero" placeholder="2025/001"></div>
+    <div class="campo"><label>Cliente</label><input type="text" id="f-cliente"></div>
+    <div class="campo"><label>Importo (€)</label><input type="number" id="f-importo" step="0.01"></div>
+    <div class="campo"><label>Data emissione</label><input type="date" id="f-data"></div>
+    <div class="campo"><label>Mese di riferimento</label>
+      <select id="f-mese">
+        <option value="0">Gennaio</option><option value="1">Febbraio</option><option value="2">Marzo</option>
+        <option value="3">Aprile</option><option value="4">Maggio</option><option value="5">Giugno</option>
+        <option value="6">Luglio</option><option value="7">Agosto</option><option value="8">Settembre</option>
+        <option value="9">Ottobre</option><option value="10">Novembre</option><option value="11">Dicembre</option>
+      </select>
+    </div>
+    <div class="campo"><label>Anno riferimento</label><input type="number" id="f-anno" placeholder="2025"></div>
+    <div class="campo"><label>Stato</label>
+      <select id="f-stato" onchange="onStatoFattChange()">
+        <option value="emessa">Emessa</option>
+        <option value="attesa">In attesa di pagamento</option>
+        <option value="parziale">Pagamento parziale</option>
+        <option value="pagata">Pagata</option>
+      </select>
+    </div>
+    <div class="campo" id="campo-fatt-acconto" style="display:none"><label>Importo ricevuto (€)</label><input type="number" id="f-acconto" step="0.01" placeholder="0.00" oninput="aggiornResiduoFatt()"></div>
+    <div id="campo-fatt-residuo" style="display:none;background:var(--bg);border-radius:8px;padding:8px 12px;margin-bottom:12px;font-size:.85rem">
+      Da ricevere: <strong id="fatt-residuo-val" style="color:var(--red)">€0,00</strong>
+    </div>
+    <div class="campo"><label>Commessa collegata</label>
+      <select id="f-commessa">
+        <option value="">— nessuna —</option>
+      </select>
+    </div>
+    <div class="campo"><label>Data scadenza (opzionale — aggiunge al calendario)</label><input type="date" id="f-scadenza"></div>
+    <div class="campo"><label>Note</label><textarea id="f-note"></textarea></div>
+    <div class="btn-row">
+      <button class="btn-secondary" onclick="chiudiModal('modal-fatt')">Annulla</button>
+      <button id="btn-del-fatt" class="btn-danger" style="display:none" onclick="eliminaFatt()">Elimina</button>
+      <button class="btn-primary" onclick="salvaFatt()">Salva</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL PREVENTIVO -->
+<div class="modal-overlay" id="modal-prev">
+  <div class="modal-box">
+    <div class="modal-title" id="modal-prev-title">Nuovo preventivo</div>
+    <div class="campo"><label>ID preventivo</label><input type="text" id="p-codice" placeholder="Es. PREV-2025-001"></div>
+    <div class="campo"><label>Titolo</label><input type="text" id="p-titolo" placeholder="Nome progetto"></div>
+    <div class="campo"><label>Cliente</label><input type="text" id="p-cliente"></div>
+    <div class="campo"><label>Data</label><input type="date" id="p-data"></div>
+    <div class="campo"><label>Stato</label>
+      <select id="p-stato">
+        <option value="in-attesa">In attesa</option>
+        <option value="inviato">Inviato</option>
+        <option value="accettato">Accettato</option>
+        <option value="respinto">Respinto</option>
+      </select>
+    </div>
+    <div class="campo"><label>Commessa collegata</label>
+      <select id="p-commessa" onchange="onPrevCommessaChange()">
+        <option value="">— non assegnato —</option>
+      </select>
+    </div>
+    <div id="prev-voci-commessa-box" style="display:none;background:var(--primary-pale);border-radius:8px;padding:10px 12px;margin-bottom:12px">
+      <div style="font-size:.78rem;font-weight:700;color:var(--primary);margin-bottom:6px">VOCI DA INCLUDERE IN COMMESSA</div>
+      <div id="prev-voci-commessa-checks"></div>
+      <div style="font-size:.75rem;color:var(--primary);margin-top:6px">Totale selezionato: <strong id="prev-voci-sel-tot">€0,00</strong></div>
+    </div>
+    <div class="campo"><label>Data scadenza (opzionale — aggiunge al calendario)</label><input type="date" id="p-scadenza"></div>
+    <div class="campo"><label>Note</label><textarea id="p-note"></textarea></div>
+    <!-- VOCI -->
+    <div style="margin-top:8px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <span style="font-size:.8rem;font-weight:700;color:var(--text2)">VOCI</span>
+        <button class="btn-outline-sm" onclick="apriModalAggiungiVoce()">+ Voce</button>
+      </div>
+      <div id="p-voci-list" class="voci-modal-list"></div>
+      <div style="text-align:right;font-size:.85rem;font-weight:700;color:var(--primary);margin-top:4px">Totale: <span id="p-totale-calc">€0,00</span></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn-secondary" onclick="chiudiModal('modal-prev')">Annulla</button>
+      <button id="btn-del-prev" class="btn-danger" style="display:none" onclick="eliminaPrev()">Elimina</button>
+      <button class="btn-primary" onclick="salvaPrev()">Salva</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL AGGIUNGI/MODIFICA VOCE AL PREVENTIVO -->
+<div class="modal-overlay" id="modal-voce-prev">
+  <div class="modal-box">
+    <div class="modal-title" id="modal-voce-prev-title">Aggiungi voce</div>
+    <div class="campo"><label>Voce</label>
+      <select id="vp-nome-sel" onchange="onVoceSel()">
+        <option value="">-- seleziona --</option>
+      </select>
+    </div>
+    <div class="campo"><label>Importo (€)</label><input type="number" id="vp-importo" step="0.01" placeholder="0.00"></div>
+    <!-- SOTTOVOCI -->
+    <div style="margin-top:6px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <span style="font-size:.78rem;font-weight:700;color:var(--text2)">SOTTOVOCI</span>
+        <button class="btn-outline-sm" onclick="aggiungiSubvocePrev()">+ Sottovoce</button>
+      </div>
+      <div id="vp-subvoci-list"></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn-secondary" onclick="chiudiModal('modal-voce-prev')">Annulla</button>
+      <button class="btn-primary" id="btn-salva-voce-prev" onclick="salvaVocePrev()">Aggiungi</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL MODIFICA SOTTOVOCE -->
+<div class="modal-overlay" id="modal-edit-subvoce">
+  <div class="modal-box">
+    <div class="modal-title">Modifica sottovoce</div>
+    <div class="campo"><label>Nome</label><input type="text" id="esv-nome"></div>
+    <div class="campo"><label>Importo (€)</label><input type="number" id="esv-importo" step="0.01"></div>
+    <div class="btn-row">
+      <button class="btn-secondary" onclick="chiudiModal('modal-edit-subvoce')">Annulla</button>
+      <button class="btn-primary" onclick="salvaEditSubvoce()">Salva</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL COMMESSA -->
+<div class="modal-overlay" id="modal-comm">
+  <div class="modal-box">
+    <div class="modal-title" id="modal-comm-title">Nuova commessa</div>
+    <div class="campo"><label>ID commessa</label><input type="text" id="c-codice" placeholder="Es. COMM-2025-001"></div>
+    <div class="campo"><label>Titolo</label><input type="text" id="c-titolo" placeholder="Nome commessa"></div>
+    <div class="campo"><label>Cliente</label><input type="text" id="c-cliente"></div>
+    <div class="campo"><label>Stato</label>
+      <select id="c-stato">
+        <option value="da-iniziare">Da iniziare</option>
+        <option value="in-corso">In corso</option>
+        <option value="da-fatturare">Da fatturare</option>
+        <option value="chiusa">Chiusa</option>
+      </select>
+    </div>
+    <div class="campo"><label>Ore previste totali (opzionale)</label><input type="number" id="c-ore-tot" placeholder="Es. 40" step="0.5"></div>
+    <div class="campo"><label>Data scadenza (opzionale — aggiunge al calendario)</label><input type="date" id="c-scadenza"></div>
+    <div class="campo"><label>Note</label><textarea id="c-note"></textarea></div>
+    <!-- PREVENTIVI COLLEGATI -->
+    <div style="margin-top:8px">
+      <div style="font-size:.78rem;font-weight:700;color:var(--text2);margin-bottom:6px">PREVENTIVI COLLEGATI</div>
+      <div id="c-prev-checks"></div>
+    </div>
+    <!-- FATTURE COLLEGATE -->
+    <div style="margin-top:8px">
+      <div style="font-size:.78rem;font-weight:700;color:var(--text2);margin-bottom:6px">FATTURE COLLEGATE</div>
+      <div id="c-fatt-checks"></div>
+    </div>
+    <!-- FASI -->
+    <div style="margin-top:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <span style="font-size:.8rem;font-weight:700;color:var(--text2)">FASI / ATTIVITÀ</span>
+        <button class="btn-outline-sm" onclick="aggiungiFaseModal()">+ Fase</button>
+      </div>
+      <div id="c-fasi-list"></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn-secondary" onclick="chiudiModal('modal-comm')">Annulla</button>
+      <button id="btn-del-comm" class="btn-danger" style="display:none" onclick="eliminaComm()">Elimina</button>
+      <button class="btn-primary" onclick="salvaComm()">Salva</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL MODIFICA FASE -->
+<div class="modal-overlay" id="modal-edit-fase">
+  <div class="modal-box">
+    <div class="modal-title" id="modal-edit-fase-title">Modifica fase</div>
+    <div class="campo"><label>Nome fase</label><input type="text" id="ef-nome"></div>
+    <div class="campo"><label>Descrizione</label><input type="text" id="ef-desc"></div>
+    <div class="campo"><label>Ore previste</label><input type="number" id="ef-ore" step="0.5" placeholder="0"></div>
+    <div class="btn-row">
+      <button class="btn-secondary" onclick="chiudiModal('modal-edit-fase')">Annulla</button>
+      <button class="btn-primary" onclick="salvaEditFase()">Salva</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL MODIFICA ATTIVITÀ -->
+<div class="modal-overlay" id="modal-edit-attiv">
+  <div class="modal-box">
+    <div class="modal-title">Modifica attività</div>
+    <div class="campo"><label>Nome attività</label><input type="text" id="ea-nome"></div>
+    <div class="campo"><label>Ore</label><input type="number" id="ea-ore" step="0.5" placeholder="0"></div>
+    <div class="btn-row">
+      <button class="btn-secondary" onclick="chiudiModal('modal-edit-attiv')">Annulla</button>
+      <button class="btn-primary" onclick="salvaEditAttiv()">Salva</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL NUOVA/MODIFICA VOCE ELENCO -->
+<div class="modal-overlay" id="modal-nuova-voce">
+  <div class="modal-box">
+    <div class="modal-title" id="modal-nuova-voce-title">Nuova voce elenco</div>
+    <div class="campo"><label>Nome voce</label><input type="text" id="nv-nome" placeholder="Es. Progettazione"></div>
+    <div class="btn-row">
+      <button class="btn-secondary" onclick="chiudiModal('modal-nuova-voce')">Annulla</button>
+      <button class="btn-primary" id="btn-salva-nuova-voce" onclick="salvaNuovaVoce()">Aggiungi</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL ARCHIVIA -->
+<div class="modal-overlay" id="modal-archivia">
+  <div class="modal-box">
+    <div class="modal-title">📦 Archivia anno</div>
+    <p style="font-size:.85rem;color:var(--text2);margin-bottom:16px" id="archiva-txt"></p>
+    <div class="btn-row">
+      <button class="btn-secondary" onclick="chiudiModal('modal-archivia')">Annulla</button>
+      <button class="btn-primary" onclick="confArchivia()">Archivia</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+// ─── FIREBASE CONFIG ───────────────────────────────────────────────────────
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyDpWcWtHxriQPMldpDn337-DJrNPoux4Ug",
+  authDomain: "scadenze-cms.firebaseapp.com",
+  projectId: "scadenze-cms",
+  storageBucket: "scadenze-cms.firebasestorage.app",
+  messagingSenderId: "247805939438",
+  appId: "1:247805939438:web:9495cc7749b7516ecdadff"
+};
+const APP_VERSION = '3.1.0';
+
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js';
+import { getFirestore, doc, setDoc, getDoc, onSnapshot, collection, getDocs } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js';
+import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, setPersistence, browserLocalPersistence } from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js';
+
+const _app  = initializeApp(FIREBASE_CONFIG);
+const _db   = getFirestore(_app);
+const _auth = getAuth(_app);
+
+// ─── STATO ────────────────────────────────────────────────────────────────
+let scadenze       = [];
+let fatture        = [];
+let preventivi     = [];
+let commesse       = [];
+let vociElenco     = ['Progettazione','Sviluppo','Consulenza','Grafica','Fotografia','Montaggio video','Redazione testi','Formazione','Assistenza'];
+let meseAperto     = null;
+let prevAperto     = null;  // id preventivo aperto
+let commAperta     = null;  // id commessa aperta
+let tabAttiva      = 'mesi';
+let annoCorrente   = new Date().getFullYear();
+let annoVista      = annoCorrente;
+let isArchivio     = false;
+let anniArchiviati = [];
+let filtroStato    = 'tutti';
+let filtroComm     = 'tutti';
+let editScadId     = null;
+let editFattId     = null;
+let editPrevId     = null;
+let editCommId     = null;
+let fabMenuOpen    = false;
+let nextIdScad     = 1;
+let nextIdFatt     = 1;
+let nextIdPrev     = 1;
+let nextIdComm     = 1;
+// voci temporanee nel modal preventivo
+let _tmpVoci       = [];
+// fasi temporanee nel modal commessa
+let _tmpFasi       = [];
+
+const MESI_BREVI = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
+const MESI_LUNG  = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+
+// ─── AUTH ─────────────────────────────────────────────────────────────────
+window.doLogin = async function() {
+  const email = document.getElementById('login-email').value.trim();
+  const pwd   = document.getElementById('login-pwd').value;
+  const err   = document.getElementById('login-error');
+  err.style.display = 'none';
+  try {
+    await setPersistence(_auth, browserLocalPersistence);
+    await signInWithEmailAndPassword(_auth, email, pwd);
+  } catch(e) {
+    err.textContent = 'Credenziali non valide o utente non autorizzato.';
+    err.style.display = 'block';
+  }
+};
+
+onAuthStateChanged(_auth, user => {
+  if (user) { document.getElementById('login-overlay').style.display = 'none'; initApp(); }
+});
+
+// ─── INIT ─────────────────────────────────────────────────────────────────
+async function initApp() {
+  checkVersione();
+  await caricaDati();
+  await caricaAnniArchiviati();
+  renderChipAnni();
+  render();
+  avviaListener();
+}
+
+// ─── FIRESTORE ────────────────────────────────────────────────────────────
+async function caricaDati(anno) {
+  anno = anno || annoVista;
+  const _ref = doc(_db, 'scadenze', anno === annoCorrente ? 'dati' : `archivio_${anno}`);
+  const snap = await getDoc(_ref);
+  if (snap.exists()) {
+    const d = snap.data();
+    scadenze    = d.scadenze    || [];
+    fatture     = d.fatture     || [];
+    preventivi  = d.preventivi  || [];
+    commesse    = d.commesse    || [];
+    vociElenco  = d.vociElenco  || vociElenco;
+    nextIdScad  = d.nextIdScad  || (scadenze.length  ? Math.max(...scadenze.map(s=>s.id))+1  : 1);
+    nextIdFatt  = d.nextIdFatt  || (fatture.length   ? Math.max(...fatture.map(f=>f.id))+1   : 1);
+    nextIdPrev  = d.nextIdPrev  || (preventivi.length ? Math.max(...preventivi.map(p=>p.id))+1 : 1);
+    nextIdComm  = d.nextIdComm  || (commesse.length  ? Math.max(...commesse.map(c=>c.id))+1  : 1);
+  }
+  const ls = localStorage.getItem(`scadenze_${anno}`);
+  if (ls && !snap.exists()) {
+    try { const d = JSON.parse(ls); scadenze=d.scadenze||[]; fatture=d.fatture||[]; preventivi=d.preventivi||[]; commesse=d.commesse||[]; } catch(e){}
+  }
+}
+
+async function salvaDati() {
+  setSyncDot('saving');
+  const payload = { scadenze, fatture, preventivi, commesse, vociElenco, nextIdScad, nextIdFatt, nextIdPrev, nextIdComm, lastModified: new Date().toISOString() };
+  try {
+    await setDoc(doc(_db,'scadenze','dati'), payload);
+    localStorage.setItem(`scadenze_${annoCorrente}`, JSON.stringify(payload));
+    setSyncDot('ok');
+  } catch(e) { setSyncDot(''); localStorage.setItem(`scadenze_${annoCorrente}`, JSON.stringify(payload)); }
+}
+
+function avviaListener() {
+  onSnapshot(doc(_db,'scadenze','dati'), snap => {
+    if (!snap.exists() || isArchivio) return;
+    const d = snap.data();
+    scadenze   = d.scadenze   || [];
+    fatture    = d.fatture    || [];
+    preventivi = d.preventivi || [];
+    commesse   = d.commesse   || [];
+    vociElenco = d.vociElenco || vociElenco;
+    nextIdScad = d.nextIdScad || 1;
+    nextIdFatt = d.nextIdFatt || 1;
+    nextIdPrev = d.nextIdPrev || 1;
+    nextIdComm = d.nextIdComm || 1;
+    render();
+    setSyncDot('ok');
+  }, () => setSyncDot(''));
+}
+
+async function caricaAnniArchiviati() {
+  const _snaps = await getDocs(collection(_db,'scadenze'));
+  anniArchiviati = [];
+  _snaps.forEach(d => {
+    if (d.id.startsWith('archivio_')) { const _a = parseInt(d.id.replace('archivio_','')); if (!isNaN(_a)) anniArchiviati.push(_a); }
+  });
+  anniArchiviati.sort((a,b)=>b-a);
+}
+
+// ─── ARCHIVIO ─────────────────────────────────────────────────────────────
+window.esciArchivio = function() {
+  isArchivio = false; annoVista = annoCorrente;
+  document.getElementById('banner-archivio').style.display = 'none';
+  meseAperto = null; prevAperto = null; commAperta = null;
+  caricaDati(annoCorrente).then(()=>{ renderChipAnni(); render(); });
+};
+
+window.confArchivia = async function() {
+  const _annoTarget = annoCorrente - 1;
+  const payload = {
+    scadenze: scadenze.filter(s => new Date(s.data).getFullYear() === _annoTarget),
+    fatture:  fatture.filter(f  => f.annoriferimento === _annoTarget),
+    preventivi: preventivi.filter(p => p.anno === _annoTarget),
+    commesse: commesse.filter(c => c.anno === _annoTarget),
+    anno: _annoTarget, archiviatoIl: new Date().toISOString()
+  };
+  try {
+    await setDoc(doc(_db,'scadenze',`archivio_${_annoTarget}`), payload);
+    scadenze   = scadenze.filter(s   => new Date(s.data).getFullYear() !== _annoTarget);
+    fatture    = fatture.filter(f    => f.annoriferimento !== _annoTarget);
+    preventivi = preventivi.filter(p => p.anno !== _annoTarget);
+    commesse   = commesse.filter(c   => c.anno !== _annoTarget);
+    await salvaDati();
+    await caricaAnniArchiviati();
+    chiudiModal('modal-archivia'); renderChipAnni(); render();
+  } catch(e) { alert('Errore durante l\'archiviazione'); }
+};
+
+window.apriModalArchivia = function() {
+  const _a = annoCorrente - 1;
+  const _nS = scadenze.filter(s=>new Date(s.data).getFullYear()===_a).length;
+  const _nF = fatture.filter(f=>f.annoriferimento===_a).length;
+  const _nP = preventivi.filter(p=>p.anno===_a).length;
+  const _nC = commesse.filter(c=>c.anno===_a).length;
+  document.getElementById('archiva-txt').textContent =
+    `Archivia ${_a}: ${_nS} scadenze, ${_nF} fatture, ${_nP} preventivi, ${_nC} commesse.`;
+  apriModal('modal-archivia');
+};
+
+// ─── CHIP ANNI ────────────────────────────────────────────────────────────
+function renderChipAnni() {
+  const c = document.getElementById('chip-anni');
+  const mostra = ['mesi','fatture'].includes(tabAttiva);
+  c.style.display = mostra ? 'flex' : 'none';
+  if (!mostra) return;
+  c.innerHTML = '';
+  const _anni = [annoCorrente];
+  // Include anni da scadenze e fatture (es. anno prossimo)
+  scadenze.forEach(s => { const a = parseInt(s.data?.slice(0,4)); if (a && !_anni.includes(a)) _anni.push(a); });
+  fatture.forEach(f => { const a = f.annoriferimento; if (a && !_anni.includes(a)) _anni.push(a); });
+  anniArchiviati.forEach(a => { if (!_anni.includes(a)) _anni.push(a); });
+  _anni.sort((a,b)=>b-a).forEach(a => {
+    const el = document.createElement('div');
+    el.className = 'chip-anno' + (a === annoVista ? ' active' : '');
+    el.textContent = (anniArchiviati.includes(a) ? '📦 ' : '') + a;
+    el.onclick = () => {
+      if (anniArchiviati.includes(a)) {
+        isArchivio = true; annoVista = a;
+        document.getElementById('banner-archivio').style.display = 'flex';
+        document.getElementById('banner-archivio-txt').textContent = `📦 Archivio ${a} — Sola lettura`;
+        caricaDati(a).then(()=>{ renderChipAnni(); render(); });
+        return;
+      }
+      annoVista = a; isArchivio = false;
+      document.getElementById('banner-archivio').style.display = 'none';
+      meseAperto = null; caricaDati(a).then(()=>{ renderChipAnni(); render(); });
+    };
+    c.appendChild(el);
+  });
+  if (!isArchivio && tabAttiva === 'fatture' && !anniArchiviati.includes(annoCorrente-1)) {
+    const btn = document.createElement('button');
+    btn.textContent = `📦 Archivia ${annoCorrente-1}`;
+    btn.style.cssText = 'margin-left:8px;padding:4px 12px;border-radius:20px;border:2px solid var(--warn);background:none;color:#b85c00;font-size:.78rem;font-weight:700;cursor:pointer;white-space:nowrap';
+    btn.onclick = () => apriModalArchivia();
+    c.appendChild(btn);
+  }
+}
+
+// ─── NAVIGAZIONE ──────────────────────────────────────────────────────────
+window.setTab = function(t) {
+  tabAttiva = t; meseAperto = null; prevAperto = null; commAperta = null;
+  document.getElementById('btn-back').style.display = 'none';
+  document.getElementById('app-title').textContent = '📅 Scadenze';
+  renderChipAnni(); render();
+};
+
+window.goBack = function() {
+  if (prevAperto !== null) { prevAperto = null; render(); return; }
+  if (commAperta !== null) { commAperta = null; render(); return; }
+  if (meseAperto !== null) { meseAperto = null; render(); return; }
+};
+
+// ─── RENDER PRINCIPALE ────────────────────────────────────────────────────
+function render() {
+  ['mesi','fatture','preventivi','commesse','impostazioni'].forEach(t => {
+    document.getElementById('tab-'+t).style.display = tabAttiva===t ? 'block' : 'none';
+    const btn = document.getElementById('tbtn-'+t) || document.getElementById('tbtn-impost');
+    if (btn) btn.classList.toggle('active', tabAttiva===t);
+  });
+  document.getElementById('tbtn-mesi').classList.toggle('active', tabAttiva==='mesi');
+  document.getElementById('tbtn-fatture').classList.toggle('active', tabAttiva==='fatture');
+  document.getElementById('tbtn-preventivi').classList.toggle('active', tabAttiva==='preventivi');
+  document.getElementById('tbtn-commesse').classList.toggle('active', tabAttiva==='commesse');
+  document.getElementById('tbtn-impost').classList.toggle('active', tabAttiva==='impostazioni');
+
+  if (tabAttiva === 'mesi')         renderMesi();
+  if (tabAttiva === 'fatture')      renderTabFatture();
+  if (tabAttiva === 'preventivi')   renderTabPreventivi();
+  if (tabAttiva === 'commesse')     renderTabCommesse();
+  if (tabAttiva === 'impostazioni') renderImpostazioni();
+  aggiornFab();
+}
+
+// ─── MESI ─────────────────────────────────────────────────────────────────
+function renderMesi() {
+  if (meseAperto !== null) { renderDettaglio(); return; }
+  document.getElementById('griglia-mesi').style.display = 'grid';
+  document.getElementById('dettaglio-mese').style.display = 'none';
+  document.getElementById('btn-back').style.display = 'none';
+  document.getElementById('app-title').textContent = '📅 Scadenze';
+  const grid = document.getElementById('griglia-mesi');
+  grid.innerHTML = '';
+  const oggi = new Date();
+  for (let m = 0; m < 12; m++) {
+    // Scadenze = commesse con data nel mese
+    const _sc = scadenze.filter(s=>{ const d=new Date(s.data+'T00:00:00'); return d.getMonth()===m && d.getFullYear()===annoVista; });
+    const _fa = fatture.filter(f=>f.meseriferimento===m && f.annoriferimento===annoVista);
+    // Commesse collegate alle scadenze di questo mese
+    const _commIds = _sc.map(s=>s.commessaId).filter(Boolean);
+    const _comm = _commIds.map(id=>commesse.find(c=>c.id===id)).filter(Boolean);
+    const _tot = _fa.reduce((s,f)=>s+Number(f.importo||0),0);
+    const box = document.createElement('div');
+    box.className = 'box-mese' + (_sc.length||_fa.length?' has-data':'') + (m===oggi.getMonth()&&annoVista===oggi.getFullYear()?' mese-corrente':'');
+    box.onclick = () => { meseAperto = m; render(); };
+    let html = `<div class="nome">${MESI_BREVI[m]}</div>`;
+    if (_sc.length) html += `<div class="riga">📌 <span class="num">${_sc.length}</span> scadenz${_sc.length===1?'a':'e'}</div>`;
+    if (_comm.length) html += `<div class="riga">🔧 <span class="num">${_comm.length}</span> commess${_comm.length===1?'a':'e'}</div>`;
+    if (_fa.length) html += `<div class="riga">🧾 <span class="num">${_fa.length}</span> fattur${_fa.length===1?'a':'e'}</div>`;
+    if (_tot) html += `<div class="riga" style="color:var(--green);font-weight:700">€${_tot.toLocaleString('it-IT',{maximumFractionDigits:0})}</div>`;
+    box.innerHTML = html;
+    grid.appendChild(box);
+  }
+}
+
+function renderDettaglio() {
+  document.getElementById('griglia-mesi').style.display = 'none';
+  document.getElementById('dettaglio-mese').style.display = 'block';
+  document.getElementById('btn-back').style.display = 'block';
+  document.getElementById('app-title').textContent = `${MESI_LUNG[meseAperto]} ${annoVista}`;
+  const _sc = scadenze.filter(s=>{ const d=new Date(s.data+'T00:00:00'); return d.getMonth()===meseAperto && d.getFullYear()===annoVista; }).sort((a,b)=>new Date(a.data)-new Date(b.data));
+  const _fa = fatture.filter(f=>f.meseriferimento===meseAperto && f.annoriferimento===annoVista);
+  document.getElementById('cnt-scad').textContent = _sc.length;
+  document.getElementById('cnt-fatt-det').textContent = _fa.length;
+  const ls = document.getElementById('lista-scadenze');
+  ls.innerHTML = '';
+  if (!_sc.length) { ls.innerHTML = '<div class="empty">Nessuna scadenza</div>'; }
+  else _sc.forEach(s => {
+    const d = new Date(s.data+'T00:00:00');
+    const oggi2 = new Date(); oggi2.setHours(0,0,0,0);
+    const _comm = s.commessaId ? commesse.find(c=>c.id===s.commessaId) : null;
+    ls.innerHTML += `<div class="card-scad${d<=oggi2?' urgente':''}">
+      <div class="data-badge">${d.getDate()}<br><span style="font-size:.65rem">${MESI_BREVI[d.getMonth()]}</span></div>
+      <div class="body">
+        <div class="titolo">${s.titolo}</div>
+        ${s.cliente?`<div class="cliente">👤 ${s.cliente}</div>`:''}
+        ${_comm?`<div class="cliente" style="color:var(--primary)">🔧 <span style="cursor:pointer;text-decoration:underline" onclick="apriCommDaScad(${_comm.id})">${_comm.titolo||_comm.codice||'Commessa'}</span></div>`:''}
+        ${s.note?`<div class="note-text">${s.note}</div>`:''}
+      </div>
+      ${!isArchivio?`<button class="btn-icon" onclick="modificaScad(${s.id})">✏️</button>`:''}
+    </div>`;
+  });
+  const lf = document.getElementById('lista-fatture-det');
+  lf.innerHTML = '';
+  if (!_fa.length) { lf.innerHTML = '<div class="empty">Nessuna fattura</div>'; }
+  else _fa.forEach(f => { lf.innerHTML += cardFattHTML(f, !isArchivio); });
+}
+
+// ─── FATTURE ──────────────────────────────────────────────────────────────
+function cardFattHTML(f, editable) {
+  const bt = {emessa:'emessa',attesa:'attesa',pagata:'pagata',parziale:'parziale'}[f.stato]||'emessa';
+  const bl = {emessa:'Emessa',attesa:'In attesa',pagata:'Pagata',parziale:'Parziale'}[f.stato];
+  const ic = {emessa:'📄',attesa:'⏳',pagata:'✅',parziale:'⚠️'}[f.stato];
+  const imp = Number(f.importo||0);
+  const acc = Number(f.acconto||0);
+  const residuo = imp - acc;
+  return `<div class="card-fatt" onclick="${editable?`modificaFatt(${f.id})`:''}" style="${editable?'cursor:pointer':''}">
+    <div class="left"><div class="num-fatt">${ic} ${f.numero||'—'}</div><div class="cliente-fatt">${f.cliente||'—'} · ${MESI_BREVI[f.meseriferimento]}</div>${f.note?`<div class="note-fatt">${f.note}</div>`:''}</div>
+    <div class="right">
+      <div class="importo">€${imp.toLocaleString('it-IT',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
+      <div class="badge-stato ${bt}">${bl}</div>
+      ${f.stato==='parziale'?`<div style="font-size:.7rem;color:var(--red);font-weight:600;margin-top:2px">Da ricevere: €${Math.max(0,residuo).toLocaleString('it-IT',{minimumFractionDigits:2})}</div>`:''}
+    </div>
+  </div>`;
+}
+
+function renderTabFatture() {
+  const _fa = fatture.filter(f=>f.annoriferimento===annoVista);
+  // Aggiorna select clienti
+  const selCl = document.getElementById('filter-cliente-fatt');
+  if (selCl) {
+    const clienti = [...new Set(_fa.map(f=>f.cliente).filter(Boolean))].sort();
+    const prev = selCl.value;
+    selCl.innerHTML = '<option value="">👤 Tutti i clienti</option>';
+    clienti.forEach(c => selCl.innerHTML += `<option value="${c}" ${c===prev?'selected':''}>${c}</option>`);
+  }
+  const filtCliente = selCl ? selCl.value : '';
+  let _fi = filtroStato==='tutti' ? _fa : _fa.filter(f=>f.stato===filtroStato);
+  if (filtCliente) _fi = _fi.filter(f=>f.cliente===filtCliente);
+  document.getElementById('tot-emesse').textContent = '€'+_fa.filter(f=>f.stato==='emessa').reduce((s,f)=>s+Number(f.importo||0),0).toLocaleString('it-IT');
+  document.getElementById('tot-attesa').textContent = '€'+_fa.filter(f=>f.stato==='attesa').reduce((s,f)=>s+Number(f.importo||0),0).toLocaleString('it-IT');
+  document.getElementById('tot-pagate').textContent = '€'+_fa.filter(f=>f.stato==='pagata').reduce((s,f)=>s+Number(f.importo||0),0).toLocaleString('it-IT');
+  // Ordina
+  const sortV = document.getElementById('sort-fatt')?.value || 'data-desc';
+  _fi = [..._fi];
+  if (sortV==='data-desc')    _fi.sort((a,b)=>new Date(b.data)-new Date(a.data));
+  else if (sortV==='data-asc') _fi.sort((a,b)=>new Date(a.data)-new Date(b.data));
+  else if (sortV==='cliente-asc') _fi.sort((a,b)=>(a.cliente||'').localeCompare(b.cliente||''));
+  else if (sortV==='cliente-desc') _fi.sort((a,b)=>(b.cliente||'').localeCompare(a.cliente||''));
+  else if (sortV==='importo-desc') _fi.sort((a,b)=>Number(b.importo||0)-Number(a.importo||0));
+  else if (sortV==='importo-asc')  _fi.sort((a,b)=>Number(a.importo||0)-Number(b.importo||0));
+  const list = document.getElementById('lista-fatture-tab');
+  list.innerHTML = '';
+  if (!_fi.length) { list.innerHTML = '<div class="empty">Nessuna fattura</div>'; return; }
+  _fi.forEach(f => { list.innerHTML += cardFattHTML(f, !isArchivio); });
+  renderChipAnni();
+}
+
+window.setFiltroStato = function(el) {
+  document.querySelectorAll('#filter-stato .chip-filter').forEach(e=>e.classList.remove('active'));
+  el.classList.add('active'); filtroStato = el.dataset.v; renderTabFatture();
+};
+
+// ─── PREVENTIVI ───────────────────────────────────────────────────────────
+function renderTabPreventivi() {
+  document.getElementById('lista-preventivi').style.display = prevAperto!==null?'none':'block';
+  document.getElementById('dettaglio-prev').style.display   = prevAperto!==null?'block':'none';
+  const eb = document.getElementById('prev-export-bar');
+  if (prevAperto !== null) { if (eb) eb.style.display='flex'; renderDettaglioPrev(); return; }
+  if (eb) { eb.style.display='none'; }
+  document.getElementById('btn-back').style.display = 'none';
+  document.getElementById('app-title').textContent = '📝 Preventivi';
+  const list = document.getElementById('lista-preventivi');
+  list.innerHTML = '';
+  if (!preventivi.length) { list.innerHTML = '<div class="empty">Nessun preventivo</div>'; return; }
+  preventivi.slice().reverse().forEach(p => { list.innerHTML += cardPrevHTML(p); });
+}
+
+function cardPrevHTML(p) {
+  const tot = calcolaTotalePrev(p);
+  const totComm = p.commessaId ? calcolaTotaleCommessaDaPrev(p) : null;
+  const comm = p.commessaId ? commesse.find(c=>c.id===p.commessaId) : null;
+  const statoLabel = {inviato:'Inviato','in-attesa':'In attesa',accettato:'Accettato',respinto:'Respinto'}[p.statoOff||'in-attesa'];
+  return `<div class="card-prev" onclick="apriPrev(${p.id})">
+    <div class="header-prev">
+      <div>
+        ${p.codice?`<div style="font-size:.7rem;color:var(--muted);font-weight:700">${p.codice}</div>`:''}
+        <div class="titolo-prev">${p.titolo||'—'}</div>
+        <div class="cliente-prev">👤 ${p.cliente||'—'}</div>
+      </div>
+      <div style="text-align:right">
+        <div class="totale-prev">€${tot.toLocaleString('it-IT',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
+        ${totComm!==null&&totComm!==tot?`<div style="font-size:.72rem;color:var(--primary)">in commessa: €${totComm.toLocaleString('it-IT',{minimumFractionDigits:2})}</div>`:''}
+      </div>
+    </div>
+    <div class="prev-footer">
+      <div style="display:flex;gap:4px;flex-wrap:wrap">
+        <div class="badge-stato ${p.statoOff||'in-attesa'}">${statoLabel}</div>
+        ${comm?`<div class="badge-stato emessa">🔧 ${comm.codice||comm.titolo}</div>`:`<div style="font-size:.7rem;color:var(--muted);font-weight:600;padding:2px 6px">Non assegnato</div>`}
+      </div>
+    </div>
+    ${p.note?`<div style="font-size:.75rem;color:var(--muted);margin-top:6px;font-style:italic">${p.note}</div>`:''}
+  </div>`;
+}
+
+function calcolaTotalePrev(p) {
+  return (p.voci||[]).reduce((tot,v) => {
+    const imp = Number(v.importo||0);
+    const sub = (v.subvoci||[]).reduce((s,sv)=>s+Number(sv.importo||0),0);
+    return tot + imp + sub;
+  }, 0);
+}
+
+window.apriPrev = function(id) {
+  prevAperto = id;
+  document.getElementById('btn-back').style.display = 'block';
+  render();
+};
+
+function renderDettaglioPrev() {
+  const p = preventivi.find(x=>x.id===prevAperto);
+  if (!p) return;
+  document.getElementById('app-title').textContent = p.titolo||'Preventivo';
+  const tot    = calcolaTotalePrev(p);
+  const ricev  = Number(p.ricevuto||0);
+  const residuo = tot - ricev;
+  const statoPag = p.statoPag||p.stato||'nonpagato';
+  const bst  = {nonpagato:'attesa',parziale:'parziale',saldato:'saldato'}[statoPag];
+  const bl   = {nonpagato:'Non pagato',parziale:'Parziale',saldato:'Saldato'}[statoPag];
+  const statoOff = p.statoOff||'in-attesa';
+  const statoOffLabel = {inviato:'Inviato','in-attesa':'In attesa',accettato:'Accettato',respinto:'Respinto'}[statoOff];
+
+  // export bar
+  const eb = document.getElementById('prev-export-bar');
+  if (eb) { eb.style.display='flex'; eb.innerHTML=`<button class="btn-outline-sm" onclick="exportPrevPDF(${p.id})">📄 PDF</button><button class="btn-outline-sm" onclick="exportPrevExcel(${p.id})">📊 Excel</button>`; }
+
+  const comm = p.commessaId ? commesse.find(c=>c.id===p.commessaId) : null;
+  const totComm = p.commessaId ? calcolaTotaleCommessaDaPrev(p) : null;
+  document.getElementById('prev-totale-box').innerHTML = `
+    <div class="totale-prev-box">
+      <div>
+        <div class="label">${p.codice||''} — Totale preventivo</div>
+        <div class="valore">€${tot.toLocaleString('it-IT',{minimumFractionDigits:2})}</div>
+        ${totComm!==null?`<div style="font-size:.78rem;opacity:.85;margin-top:2px">In commessa: €${totComm.toLocaleString('it-IT',{minimumFractionDigits:2})}</div>`:''}
+      </div>
+      <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">
+        <div class="badge-stato ${statoOff}">${statoOffLabel}</div>
+        ${comm?`<div style="font-size:.72rem;background:rgba(255,255,255,.2);border-radius:6px;padding:2px 8px">🔧 ${comm.codice||comm.titolo}</div>`:`<div style="font-size:.72rem;opacity:.7">Non assegnato</div>`}
+      </div>
+    </div>`;
+
+  let pgHTML = `<div class="pagamento-box">`;
+  if (comm) {
+    pgHTML += `<div class="pg-row"><span class="pg-label">Commessa</span><span class="pg-val" style="color:var(--primary);cursor:pointer" onclick="apriCommDaScad(${comm.id})">🔧 ${comm.codice||comm.titolo}</span></div>`;
+  }
+  if (!isArchivio) pgHTML += `<div style="margin-top:8px"><button class="btn-outline-sm" onclick="modificaPrev(${p.id})">✏️ Modifica preventivo</button></div>`;
+  pgHTML += `</div>`;
+  document.getElementById('prev-pagamento-box').innerHTML = pgHTML;
+
+  const vl = document.getElementById('prev-voci-list');
+  vl.innerHTML = '';
+  if (!(p.voci||[]).length) { vl.innerHTML = '<div class="empty">Nessuna voce</div>'; return; }
+  p.voci.forEach(v => {
+    const sv = (v.subvoci||[]).map(s =>
+      `<div class="subvoce-row"><span class="sv-nome">${s.nome}</span><span class="sv-imp">€${Number(s.importo||0).toLocaleString('it-IT',{minimumFractionDigits:2})}</span></div>`
+    ).join('');
+    vl.innerHTML += `<div class="voce-row">
+      <div class="voce-header"><span class="voce-nome">${v.nome}</span><span class="voce-importo">€${Number(v.importo||0).toLocaleString('it-IT',{minimumFractionDigits:2})}</span></div>
+      ${sv?`<div class="subvoci-modal" style="margin-top:6px">${sv}</div>`:''}
+    </div>`;
+  });
+}
+
+// ─── COMMESSE ─────────────────────────────────────────────────────────────
+window.setFiltroComm = function(el) {
+  document.querySelectorAll('#filter-comm .chip-filter').forEach(e=>e.classList.remove('active'));
+  el.classList.add('active'); filtroComm = el.dataset.v; renderTabCommesse();
+};
+
+function renderTabCommesse() {
+  document.getElementById('lista-commesse').style.display  = commAperta!==null?'none':'block';
+  document.getElementById('filter-comm').style.display     = commAperta!==null?'none':'flex';
+  document.getElementById('dettaglio-comm').style.display  = commAperta!==null?'block':'none';
+  if (commAperta !== null) { renderDettaglioComm(); return; }
+  document.getElementById('btn-back').style.display = 'none';
+  document.getElementById('app-title').textContent = '🔧 Commesse';
+  const _co = filtroComm==='tutti' ? commesse : commesse.filter(c=>c.stato===filtroComm);
+  const list = document.getElementById('lista-commesse');
+  list.innerHTML = '';
+  if (!_co.length) { list.innerHTML = '<div class="empty">Nessuna commessa</div>'; return; }
+  _co.slice().reverse().forEach(c => { list.innerHTML += cardCommHTML(c); });
+}
+
+function cardCommHTML(c) {
+  const _oreFasi  = (c.fasi||[]).reduce((s,f)=>s+Number(f.ore||0)+(f.attivita||[]).reduce((ss,a)=>ss+Number(a.ore||0),0),0);
+  const _oreShow  = _oreFasi > 0 ? _oreFasi : (c.oreTotali||0);
+  const bst = {'da-iniziare':'da-iniziare','in-corso':'in-corso','da-fatturare':'da-fatturare','chiusa':'chiusa','aperta':'aperta','completata':'completata'}[c.stato]||'da-iniziare';
+  const bl  = {'da-iniziare':'Da iniziare','in-corso':'In corso','da-fatturare':'Da fatturare','chiusa':'Chiusa','aperta':'Aperta','completata':'Completata'}[c.stato]||'Da iniziare';
+  const _prevCol = (c.prevCollegati||[]).map(id=>preventivi.find(p=>p.id===id)).filter(Boolean);
+  const _fattCol = fatture.filter(f=>(f.commessaId===c.id)||(c.fattCollegate||[]).includes(f.id));
+  return `<div class="card-comm" onclick="apriComm(${c.id})">
+    ${c.codice?`<div style="font-size:.7rem;color:var(--muted);font-weight:700">${c.codice}</div>`:''}
+    <div class="titolo-comm">${c.titolo||'—'}</div>
+    <div class="cliente-comm">👤 ${c.cliente||'—'}</div>
+    ${_prevCol.length?`<div style="font-size:.74rem;color:var(--primary);margin-top:4px">📝 ${_prevCol.map(p=>p.titolo).join(', ')}</div>`:''}
+    ${_fattCol.length?`<div style="font-size:.74rem;color:var(--green);margin-top:2px">🧾 ${_fattCol.length} fattur${_fattCol.length===1?'a':'e'}</div>`:''}
+    <div class="comm-footer">
+      <div class="badge-comm ${bst}">${bl}</div>
+      ${_oreShow?`<div class="ore-badge">⏱ ${_oreShow}h</div>`:''}
+    </div>
+  </div>`;
+}
+
+window.apriComm = function(id) {
+  commAperta = id;
+  document.getElementById('btn-back').style.display = 'block';
+  render();
+};
+
+function renderDettaglioComm() {
+  const c = commesse.find(x=>x.id===commAperta);
+  if (!c) return;
+  document.getElementById('app-title').textContent = c.titolo||'Commessa';
+
+  // Preventivi collegati
+  const _prevCol = (c.prevCollegati||[]).map(id=>preventivi.find(p=>p.id===id)).filter(Boolean);
+  const pc = document.getElementById('comm-prev-collegati');
+  pc.innerHTML = '';
+  if (_prevCol.length) {
+    const totPrev = _prevCol.reduce((s,p)=>s+calcolaTotaleCommessaDaPrev(p),0);
+    pc.innerHTML = `<div class="prev-collegati"><div class="label">📝 Preventivi collegati — <span style="font-weight:800">€${totPrev.toLocaleString('it-IT',{minimumFractionDigits:2})}</span></div>
+      ${_prevCol.map(p=>{
+        const t = calcolaTotaleCommessaDaPrev(p);
+        return `<span class="prev-chip" style="cursor:pointer" onclick="apriPrevDaComm(${p.id})">${p.codice||p.titolo} · €${t.toLocaleString('it-IT',{minimumFractionDigits:0})} ✏️</span>`;
+      }).join('')}
+    </div>`;
+  }
+
+  // Fatture collegate
+  const _fattCol = fatture.filter(f=>(f.commessaId===c.id)||(c.fattCollegate||[]).includes(f.id));
+  const fc = document.getElementById('comm-fatt-collegate');
+  fc.innerHTML = '';
+  if (_fattCol.length) {
+    fc.innerHTML = `<div class="prev-collegati" style="background:#f0faf4"><div class="label" style="color:var(--green)">🧾 Fatture collegate</div>
+      ${_fattCol.map(f=>`<span class="prev-chip" style="cursor:pointer;background:var(--green)" onclick="modificaFatt(${f.id})">${f.numero||f.id} — €${Number(f.importo||0).toLocaleString('it-IT',{minimumFractionDigits:2})} ✏️</span>`).join('')}
+    </div>`;
+  }
+
+  // Ore e azioni
+  const _oreFasi = (c.fasi||[]).reduce((s,f)=>s+Number(f.ore||0)+(f.attivita||[]).reduce((ss,a)=>ss+Number(a.ore||0),0),0);
+  const ob = document.getElementById('comm-ore-box');
+  const _oreManuale = Number(c.oreTotali||0);
+  ob.innerHTML = `<div class="pagamento-box">
+    ${c.codice?`<div class="pg-row"><span class="pg-label">ID</span><span class="pg-val" style="font-size:.8rem">${c.codice}</span></div>`:''}
+    ${_oreFasi>0?`<div class="pg-row"><span class="pg-label">Ore da fasi</span><span class="pg-val">⏱ ${_oreFasi}h</span></div>`:''}
+    ${_oreManuale>0 && _oreFasi===0?`<div class="pg-row"><span class="pg-label">Ore previste</span><span class="pg-val">⏱ ${_oreManuale}h</span></div>`:''}
+    ${_oreFasi>0 && _oreManuale>0?`<div class="pg-row"><span class="pg-label">Ore manuali</span><span class="pg-val" style="color:var(--muted)">⏱ ${_oreManuale}h</span></div>`:''}
+    <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
+      ${!isArchivio?`<button class="btn-outline-sm" onclick="modificaComm(${c.id})">✏️ Modifica</button>`:''}
+      <button class="btn-outline-sm" onclick="exportCommPDF(${c.id})">📄 PDF</button>
+      <button class="btn-outline-sm" onclick="exportCommExcel(${c.id})">📊 Excel</button>
+    </div>
+  </div>`;
+
+  // Fasi
+  const fl = document.getElementById('comm-fasi-list');
+  document.getElementById('cnt-fasi').textContent = (c.fasi||[]).length;
+  fl.innerHTML = '';
+  if (!(c.fasi||[]).length) { fl.innerHTML = '<div class="empty">Nessuna fase</div>'; return; }
+  c.fasi.forEach((f,fi) => {
+    const _attHTML = (f.attivita||[]).map((a,ai) =>
+      `<div class="attiv-row">
+        <span class="at-nome">${a.nome}</span>
+        <div style="display:flex;align-items:center;gap:6px">
+          ${a.ore?`<span class="at-ore">⏱ ${a.ore}h</span>`:''}
+          ${!isArchivio?`<button class="btn-icon" onclick="apriEditAttiv(${fi},${ai})" style="font-size:.85rem">✏️</button><button class="btn-icon" onclick="rimuoviAttivSalvata(${fi},${ai})">✕</button>`:''}
+        </div>
+      </div>`
+    ).join('');
+    fl.innerHTML += `<div class="fase-card">
+      <div class="fase-header">
+        <span class="fase-nome">${f.nome}</span>
+        <div style="display:flex;align-items:center;gap:6px">
+          ${f.ore?`<span class="fase-ore">⏱ ${f.ore}h</span>`:''}
+          ${!isArchivio?`<button class="btn-icon" onclick="apriEditFase(${fi})" style="font-size:.85rem">✏️</button><button class="btn-icon" onclick="rimuoviFaseSalvata(${fi})">✕</button><button class="btn-icon" onclick="apriAddAttivSalvata(${fi})" style="font-size:.9rem">+</button>`:''}
+        </div>
+      </div>
+      ${f.desc?`<div class="fase-desc">${f.desc}</div>`:''}
+      ${_attHTML?`<div style="margin-top:4px">${_attHTML}</div>`:''}
+    </div>`;
+  });
+}
+
+window.apriPrevDaComm = function(id) {
+  tabAttiva = 'preventivi'; prevAperto = id; commAperta = null; render();
+};
+window.apriCommDaScad = function(id) {
+  tabAttiva = 'commesse'; commAperta = id; meseAperto = null; render();
+};
+
+// ─── SINCRONIZZA SCADENZA DA FATTURA/PREVENTIVO/COMMESSA ──────────────────
+function _sincronizzaScadenzaDaOggetto(tipo, refId, data, titolo, cliente, commessaId) {
+  if (!data) return;
+  // cerca scadenza già esistente per questo oggetto
+  const key = `${tipo}_${refId}`;
+  const esiste = scadenze.findIndex(s=>s.refKey===key);
+  const obj = {titolo, cliente:cliente||'', data, completata:false, refKey:key, commessaId:commessaId||null};
+  if (esiste>=0) scadenze[esiste]={...scadenze[esiste],...obj};
+  else scadenze.push({id:nextIdScad++,...obj});
+}
+
+// ─── EXPORT PDF ────────────────────────────────────────────────────────────
+function _printHTML(html, title) {
+  const w = window.open('','_blank');
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${title}</title>
+  <style>body{font-family:sans-serif;padding:24px;font-size:13px;color:#1a2e22}table{border-collapse:collapse;width:100%}th,td{border:1px solid #cdd8d2;padding:6px 10px;text-align:left}th{background:#2d6a4f;color:#fff}tr:nth-child(even){background:#f0f4f1}h2{color:#2d6a4f;margin-bottom:16px}@media print{button{display:none}}</style></head><body>
+  <button onclick="window.print()" style="margin-bottom:16px;padding:8px 16px;background:#2d6a4f;color:#fff;border:none;border-radius:6px;cursor:pointer">🖨 Stampa / Salva PDF</button>
+  ${html}</body></html>`);
+  w.document.close();
+}
+window.exportFatturePDF = function() {
+  const _fa = fatture.filter(f=>f.annoriferimento===annoVista);
+  const filtCliente = document.getElementById('filter-cliente-fatt')?.value||'';
+  let _fi = filtroStato==='tutti'?_fa:_fa.filter(f=>f.stato===filtroStato);
+  if (filtCliente) _fi = _fi.filter(f=>f.cliente===filtCliente);
+  const rows = _fi.map(f=>`<tr><td>${f.numero||'—'}</td><td>${f.cliente||'—'}</td><td>${MESI_BREVI[f.meseriferimento]||''}</td><td>€${Number(f.importo||0).toLocaleString('it-IT',{minimumFractionDigits:2})}</td><td>${{emessa:'Emessa',attesa:'In attesa',pagata:'Pagata'}[f.stato]||f.stato}</td><td>${f.note||''}</td></tr>`).join('');
+  const tot = _fi.reduce((s,f)=>s+Number(f.importo||0),0);
+  _printHTML(`<h2>Fatture ${annoVista}</h2><table><thead><tr><th>N°</th><th>Cliente</th><th>Mese</th><th>Importo</th><th>Stato</th><th>Note</th></tr></thead><tbody>${rows}<tr><td colspan="3"><strong>Totale</strong></td><td><strong>€${tot.toLocaleString('it-IT',{minimumFractionDigits:2})}</strong></td><td colspan="2"></td></tr></tbody></table>`,'Fatture '+annoVista);
+};
+window.exportFattureExcel = function() {
+  const _fa = fatture.filter(f=>f.annoriferimento===annoVista);
+  const filtCliente = document.getElementById('filter-cliente-fatt')?.value||'';
+  let _fi = filtroStato==='tutti'?_fa:_fa.filter(f=>f.stato===filtroStato);
+  if (filtCliente) _fi = _fi.filter(f=>f.cliente===filtCliente);
+  const rows = [['Numero','Cliente','Mese','Anno','Importo','Stato','Note'],..._fi.map(f=>[f.numero||'',f.cliente||'',MESI_BREVI[f.meseriferimento]||'',f.annoriferimento,f.importo||0,f.stato||'',f.note||''])];
+  _downloadCSV(rows,'fatture_'+annoVista+'.csv');
+};
+window.exportPrevPDF = function(id) {
+  const p = preventivi.find(x=>x.id===id); if (!p) return;
+  const tot = calcolaTotalePrev(p);
+  const vociHTML = (p.voci||[]).map(v=>{
+    const sv = (v.subvoci||[]).map(s=>`<tr style="background:#f9fafb"><td style="padding-left:24px">${s.nome}</td><td></td><td>€${Number(s.importo||0).toLocaleString('it-IT',{minimumFractionDigits:2})}</td></tr>`).join('');
+    return `<tr><td><strong>${v.nome}</strong></td><td>€${Number(v.importo||0).toLocaleString('it-IT',{minimumFractionDigits:2})}</td><td></td></tr>${sv}`;
+  }).join('');
+  _printHTML(`<h2>Preventivo: ${p.codice||''} ${p.titolo}</h2>
+  <p>Cliente: ${p.cliente||'—'} · Data: ${p.data||'—'}</p>
+  <p>Stato: ${p.statoOff||'—'} · Pagamento: ${p.statoPag||p.stato||'—'}</p>
+  <table><thead><tr><th>Voce</th><th>Importo voce</th><th>Importo sottovoce</th></tr></thead><tbody>${vociHTML}
+  <tr><td colspan="2"><strong>TOTALE</strong></td><td><strong>€${tot.toLocaleString('it-IT',{minimumFractionDigits:2})}</strong></td></tr></tbody></table>
+  ${p.note?`<p><em>Note: ${p.note}</em></p>`:''}`,'Preventivo '+p.titolo);
+};
+window.exportPrevExcel = function(id) {
+  const p = preventivi.find(x=>x.id===id); if (!p) return;
+  const rows = [['Voce','Sottovoce','Importo']];
+  (p.voci||[]).forEach(v=>{
+    rows.push([v.nome,'',v.importo||0]);
+    (v.subvoci||[]).forEach(s=>rows.push(['',s.nome,s.importo||0]));
+  });
+  rows.push(['TOTALE','',calcolaTotalePrev(p)]);
+  _downloadCSV(rows,'preventivo_'+(p.codice||p.id)+'.csv');
+};
+window.exportCommPDF = function(id) {
+  const c = commesse.find(x=>x.id===id); if (!c) return;
+  const prevCol = (c.prevCollegati||[]).map(pid=>preventivi.find(p=>p.id===pid)).filter(Boolean);
+  const fattCol = fatture.filter(f=>(f.commessaId===c.id)||(c.fattCollegate||[]).includes(f.id));
+  const fasiHTML = (c.fasi||[]).map(f=>{
+    const att = (f.attivita||[]).map(a=>`<li>${a.nome}${a.ore?' · '+a.ore+'h':''}</li>`).join('');
+    return `<tr><td><strong>${f.nome}</strong>${f.desc?`<br><small>${f.desc}</small>`:''}</td><td>${f.ore||'—'}h</td><td><ul style="margin:0;padding-left:16px">${att}</ul></td></tr>`;
+  }).join('');
+  const totFatt = fattCol.reduce((s,f)=>s+Number(f.importo||0),0);
+  _printHTML(`<h2>Commessa: ${c.codice||''} ${c.titolo}</h2>
+  <p>Cliente: ${c.cliente||'—'} · Stato: ${c.stato||'—'}</p>
+  ${c.note?`<p><em>${c.note}</em></p>`:''}
+  ${prevCol.length?`<p>Preventivi: ${prevCol.map(p=>p.codice||p.titolo).join(', ')}</p>`:''}
+  ${fattCol.length?`<p>Fatture: ${fattCol.map(f=>f.numero||f.id).join(', ')} — Totale: €${totFatt.toLocaleString('it-IT',{minimumFractionDigits:2})}</p>`:''}
+  ${fasiHTML?`<h3 style="color:#2d6a4f">Fasi</h3><table><thead><tr><th>Fase</th><th>Ore</th><th>Attività</th></tr></thead><tbody>${fasiHTML}</tbody></table>`:''}`,'Commessa '+c.titolo);
+};
+window.exportCommExcel = function(id) {
+  const c = commesse.find(x=>x.id===id); if (!c) return;
+  const rows = [['Commessa',c.codice||'',c.titolo],['Cliente',c.cliente||''],['Stato',c.stato||''],[''],['Fase','Ore fase','Attività','Ore attività']];
+  (c.fasi||[]).forEach(f=>{
+    rows.push([f.nome,f.ore||0,'','']);
+    (f.attivita||[]).forEach(a=>rows.push(['','',a.nome,a.ore||0]));
+  });
+  _downloadCSV(rows,'commessa_'+(c.codice||c.id)+'.csv');
+};
+function _downloadCSV(rows, filename) {
+  const csv = rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
+  const blob = new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename; a.click();
+}
+
+// ─── IMPOSTAZIONI / VOCI ELENCO ───────────────────────────────────────────
+function renderImpostazioni() {
+  document.getElementById('app-title').textContent = '⚙️ Impostazioni';
+  document.getElementById('btn-back').style.display = 'none';
+  const list = document.getElementById('elenco-voci-list');
+  list.innerHTML = '';
+  vociElenco.forEach((v,i) => {
+    list.innerHTML += `<div class="elenco-voce-row">
+      <span class="ev-nome">${v}</span>
+      <div style="display:flex;gap:4px">
+        <button class="btn-icon" onclick="modificaVoceElenco(${i})">✏️</button>
+        <button class="btn-icon" onclick="eliminaVoceElenco(${i})">🗑️</button>
+      </div>
+    </div>`;
+  });
+}
+
+let _editVoceElencoIdx = null;
+window.apriModalNuovaVoce = function() {
+  _editVoceElencoIdx = null;
+  document.getElementById('nv-nome').value='';
+  document.getElementById('modal-nuova-voce-title').textContent = 'Nuova voce elenco';
+  document.getElementById('btn-salva-nuova-voce').textContent = 'Aggiungi';
+  apriModal('modal-nuova-voce');
+};
+window.modificaVoceElenco = function(i) {
+  _editVoceElencoIdx = i;
+  document.getElementById('nv-nome').value = vociElenco[i];
+  document.getElementById('modal-nuova-voce-title').textContent = 'Modifica voce elenco';
+  document.getElementById('btn-salva-nuova-voce').textContent = 'Salva';
+  apriModal('modal-nuova-voce');
+};
+window.salvaNuovaVoce = async function() {
+  const n = document.getElementById('nv-nome').value.trim();
+  if (!n) return;
+  if (_editVoceElencoIdx !== null) vociElenco[_editVoceElencoIdx] = n;
+  else vociElenco.push(n);
+  chiudiModal('modal-nuova-voce');
+  await salvaDati(); renderImpostazioni();
+};
+window.eliminaVoceElenco = async function(i) {
+  if (!confirm(`Eliminare "${vociElenco[i]}"?`)) return;
+  vociElenco.splice(i,1);
+  await salvaDati(); renderImpostazioni();
+};
+
+// ─── FAB ────────────────────────────────────────────────────────────────
+function aggiornFab() {
+  const fab = document.getElementById('fab');
+  const fm  = document.getElementById('fab-menu');
+  const mostra = !isArchivio && (
+    (tabAttiva==='mesi' && meseAperto!==null) ||
+    tabAttiva==='fatture' ||
+    (tabAttiva==='preventivi' && prevAperto===null) ||
+    (tabAttiva==='commesse' && commAperta===null)
+  );
+  fab.style.display = mostra ? 'flex' : 'none';
+  if (!mostra) { fabMenuOpen=false; fm.style.display='none'; }
+
+  fm.innerHTML = '';
+  if (tabAttiva==='mesi') {
+    fm.innerHTML = `
+      <div class="fab-menu-item"><span class="fab-label">Scadenza</span><button class="fab-mini" onclick="apriModalScad()">📌</button></div>
+      <div class="fab-menu-item"><span class="fab-label">Fattura</span><button class="fab-mini" onclick="apriModalFatt()">🧾</button></div>`;
+  }
+}
+
+window.toggleFabMenu = function() {
+  if (tabAttiva==='fatture')     { apriModalFatt(); return; }
+  if (tabAttiva==='preventivi')  { apriModalPrev(); return; }
+  if (tabAttiva==='commesse')    { apriModalComm(); return; }
+  fabMenuOpen = !fabMenuOpen;
+  document.getElementById('fab-menu').style.display = fabMenuOpen ? 'flex' : 'none';
+};
+
+function chiudiFabMenu() { fabMenuOpen=false; document.getElementById('fab-menu').style.display='none'; }
+
+// ─── MODAL SCADENZA ──────────────────────────────────────────────────────
+window.apriModalScad = function(id) {
+  chiudiFabMenu(); editScadId = id||null;
+  const s = id ? scadenze.find(x=>x.id===id) : null;
+  document.getElementById('modal-scad-title').textContent = s?'Modifica scadenza':'Nuova scadenza';
+  document.getElementById('s-titolo').value  = s?.titolo||'';
+  document.getElementById('s-cliente').value = s?.cliente||'';
+  document.getElementById('s-note').value    = s?.note||'';
+  const def = meseAperto!==null ? `${annoVista}-${String(meseAperto+1).padStart(2,'0')}-01` : new Date().toISOString().slice(0,10);
+  document.getElementById('s-data').value = s?.data||def;
+  document.getElementById('btn-del-scad').style.display = s?'block':'none';
+  // Commessa select
+  const sc = document.getElementById('s-commessa');
+  sc.innerHTML = '<option value="">— nessuna —</option>';
+  commesse.forEach(c => sc.innerHTML += `<option value="${c.id}" ${s?.commessaId===c.id?'selected':''}>${c.codice||c.titolo}</option>`);
+  apriModal('modal-scad');
+};
+window.modificaScad = function(id) { apriModalScad(id); };
+window.salvaScad = async function() {
+  const titolo = document.getElementById('s-titolo').value.trim();
+  const data   = document.getElementById('s-data').value;
+  if (!titolo||!data) { alert('Inserisci titolo e data'); return; }
+  const commId = document.getElementById('s-commessa').value ? parseInt(document.getElementById('s-commessa').value) : null;
+  const obj = {titolo,cliente:document.getElementById('s-cliente').value.trim(),data,note:document.getElementById('s-note').value.trim(),commessaId:commId||null};
+  if (editScadId) { const i=scadenze.findIndex(s=>s.id===editScadId); scadenze[i]={...scadenze[i],...obj}; }
+  else scadenze.push({id:nextIdScad++,...obj,completata:false});
+  chiudiModal('modal-scad'); await salvaDati(); render();
+};
+window.eliminaScad = async function() {
+  if (!confirm('Eliminare?')) return;
+  scadenze=scadenze.filter(s=>s.id!==editScadId); chiudiModal('modal-scad'); await salvaDati(); render();
+};
+
+// ─── MODAL FATTURA ───────────────────────────────────────────────────────
+window.onStatoFattChange = function() {
+  const v = document.getElementById('f-stato').value;
+  const isParz = v === 'parziale';
+  document.getElementById('campo-fatt-acconto').style.display = isParz ? 'block' : 'none';
+  document.getElementById('campo-fatt-residuo').style.display = isParz ? 'block' : 'none';
+  if (isParz) aggiornResiduoFatt();
+};
+window.aggiornResiduoFatt = function() {
+  const imp = parseFloat(document.getElementById('f-importo').value)||0;
+  const acc = parseFloat(document.getElementById('f-acconto').value)||0;
+  document.getElementById('fatt-residuo-val').textContent = '€'+(Math.max(0,imp-acc)).toLocaleString('it-IT',{minimumFractionDigits:2});
+};
+window.apriModalFatt = function(id) {
+  chiudiFabMenu(); editFattId = id||null;
+  const f = id ? fatture.find(x=>x.id===id) : null;
+  document.getElementById('modal-fatt-title').textContent = f?'Modifica fattura':'Nuova fattura';
+  document.getElementById('f-numero').value  = f?.numero||'';
+  document.getElementById('f-cliente').value = f?.cliente||'';
+  document.getElementById('f-importo').value = f?.importo||'';
+  document.getElementById('f-data').value    = f?.data||new Date().toISOString().slice(0,10);
+  document.getElementById('f-mese').value    = f?.meseriferimento ?? (meseAperto!==null?meseAperto:new Date().getMonth());
+  document.getElementById('f-anno').value    = f?.annoriferimento || annoVista;
+  document.getElementById('f-stato').value   = f?.stato||'emessa';
+  document.getElementById('f-acconto').value = f?.acconto||'';
+  document.getElementById('f-scadenza').value= f?.scadenzaData||'';
+  document.getElementById('f-note').value    = f?.note||'';
+  document.getElementById('btn-del-fatt').style.display = f?'block':'none';
+  onStatoFattChange();
+  // Commessa select
+  const sc = document.getElementById('f-commessa');
+  sc.innerHTML = '<option value="">— nessuna —</option>';
+  commesse.forEach(c => sc.innerHTML += `<option value="${c.id}" ${f?.commessaId===c.id?'selected':''}>${c.codice||c.titolo}</option>`);
+  apriModal('modal-fatt');
+};
+window.modificaFatt = function(id) { if (!isArchivio) apriModalFatt(id); };
+window.salvaFatt = async function() {
+  const cliente=document.getElementById('f-cliente').value.trim();
+  if (!cliente) { alert('Inserisci il cliente'); return; }
+  const data=document.getElementById('f-data').value;
+  const annoManuale=parseInt(document.getElementById('f-anno').value)||null;
+  const anno=annoManuale||(data?parseInt(data.slice(0,4)):annoVista);
+  const commId=document.getElementById('f-commessa').value?parseInt(document.getElementById('f-commessa').value):null;
+  const stato=document.getElementById('f-stato').value;
+  const acconto=stato==='parziale'?parseFloat(document.getElementById('f-acconto').value)||0:0;
+  const scadenzaData=document.getElementById('f-scadenza').value||null;
+  const obj={numero:document.getElementById('f-numero').value.trim(),cliente,importo:parseFloat(document.getElementById('f-importo').value)||0,data,meseriferimento:parseInt(document.getElementById('f-mese').value),annoriferimento:anno,stato,acconto,note:document.getElementById('f-note').value.trim(),commessaId:commId||null,scadenzaData};
+  if (editFattId) { const i=fatture.findIndex(f=>f.id===editFattId); fatture[i]={...fatture[i],...obj}; }
+  else fatture.push({id:nextIdFatt++,...obj});
+  // Crea/aggiorna scadenza nel calendario se presente
+  if (scadenzaData) _sincronizzaScadenzaDaOggetto('fattura', editFattId||fatture[fatture.length-1].id, scadenzaData, `Fattura: ${obj.numero||obj.cliente}`, obj.cliente, commId);
+  chiudiModal('modal-fatt'); await salvaDati(); render();
+};
+window.eliminaFatt = async function() {
+  if (!confirm('Eliminare?')) return;
+  fatture=fatture.filter(f=>f.id!==editFattId); chiudiModal('modal-fatt'); await salvaDati(); render();
+};
+
+// ─── MODAL PREVENTIVO ────────────────────────────────────────────────────
+window.apriModalPrev = function(id) {
+  editPrevId = id||null;
+  const p = id ? preventivi.find(x=>x.id===id) : null;
+  _tmpVoci = p ? JSON.parse(JSON.stringify(p.voci||[])) : [];
+  document.getElementById('modal-prev-title').textContent = p?'Modifica preventivo':'Nuovo preventivo';
+  document.getElementById('p-codice').value   = p?.codice||'';
+  document.getElementById('p-titolo').value   = p?.titolo||'';
+  document.getElementById('p-cliente').value  = p?.cliente||'';
+  document.getElementById('p-data').value     = p?.data||new Date().toISOString().slice(0,10);
+  document.getElementById('p-stato').value    = p?.statoOff||'in-attesa';
+  document.getElementById('p-scadenza').value = p?.scadenzaData||'';
+  document.getElementById('p-note').value     = p?.note||'';
+  document.getElementById('btn-del-prev').style.display = p?'block':'none';
+  // Commessa select
+  const sc = document.getElementById('p-commessa');
+  sc.innerHTML = '<option value="">— non assegnato —</option>';
+  commesse.forEach(c => sc.innerHTML += `<option value="${c.id}" ${p?.commessaId===c.id?'selected':''}>${c.codice||c.titolo}</option>`);
+  renderVociPrevModal();
+  onPrevCommessaChange();
+  apriModal('modal-prev');
+};
+window.modificaPrev = function(id) { apriModalPrev(id); };
+
+window.onPrevCommessaChange = function() {
+  const commId = document.getElementById('p-commessa').value ? parseInt(document.getElementById('p-commessa').value) : null;
+  const box = document.getElementById('prev-voci-commessa-box');
+  if (!commId) { box.style.display='none'; return; }
+  box.style.display='block';
+  _renderVociCommessaCheck();
+};
+function _renderVociCommessaCheck() {
+  const checks = document.getElementById('prev-voci-commessa-checks');
+  const p = editPrevId ? preventivi.find(x=>x.id===editPrevId) : null;
+  const vociSel = p?.vociCommessa || {};
+  checks.innerHTML = '';
+  let tot = 0;
+  _tmpVoci.forEach((v,i) => {
+    const subvoci = v.subvoci||[];
+    // riga voce principale
+    const vChk = vociSel[`v${i}`]!==false;
+    const vImp = vociSel[`v${i}_imp`] !== undefined ? vociSel[`v${i}_imp`] : Number(v.importo||0);
+    if (vChk) tot += vImp;
+    checks.innerHTML += `<div style="background:var(--surface);border-radius:6px;padding:6px 8px;margin-bottom:4px">
+      <div style="display:flex;align-items:center;gap:8px">
+        <input type="checkbox" id="vc_v${i}" ${vChk?'checked':''} style="width:auto" onchange="_aggiornaVociCommessa()">
+        <span style="font-size:.83rem;font-weight:600;flex:1">${v.nome}</span>
+        <input type="number" id="vc_imp_v${i}" value="${vImp}" step="0.01" style="width:80px;padding:3px 6px;border:1.5px solid #cdd8d2;border-radius:6px;font-size:.8rem" oninput="_aggiornaVociCommessa()">
+      </div>
+      ${subvoci.map((s,si)=>{
+        const sChk = vociSel[`v${i}_s${si}`]!==false;
+        const sImp = vociSel[`v${i}_s${si}_imp`] !== undefined ? vociSel[`v${i}_s${si}_imp`] : Number(s.importo||0);
+        if (sChk) tot += sImp;
+        return `<div style="display:flex;align-items:center;gap:8px;margin-top:3px;padding-left:16px">
+          <input type="checkbox" id="vc_v${i}_s${si}" ${sChk?'checked':''} style="width:auto" onchange="_aggiornaVociCommessa()">
+          <span style="font-size:.77rem;flex:1;color:var(--text2)">${s.nome}</span>
+          <input type="number" id="vc_imp_v${i}_s${si}" value="${sImp}" step="0.01" style="width:80px;padding:3px 6px;border:1.5px solid #cdd8d2;border-radius:6px;font-size:.8rem" oninput="_aggiornaVociCommessa()">
+        </div>`;
+      }).join('')}
+    </div>`;
+  });
+  document.getElementById('prev-voci-sel-tot').textContent = '€'+tot.toLocaleString('it-IT',{minimumFractionDigits:2});
+}
+window._aggiornaVociCommessa = function() {
+  let tot = 0;
+  _tmpVoci.forEach((v,i) => {
+    const chk = document.getElementById(`vc_v${i}`)?.checked;
+    const imp = parseFloat(document.getElementById(`vc_imp_v${i}`)?.value)||0;
+    if (chk) tot += imp;
+    (v.subvoci||[]).forEach((_s,si) => {
+      const sc = document.getElementById(`vc_v${i}_s${si}`)?.checked;
+      const si2 = parseFloat(document.getElementById(`vc_imp_v${i}_s${si}`)?.value)||0;
+      if (sc) tot += si2;
+    });
+  });
+  document.getElementById('prev-voci-sel-tot').textContent = '€'+tot.toLocaleString('it-IT',{minimumFractionDigits:2});
+};
+function _leggiVociCommessa() {
+  const map = {};
+  _tmpVoci.forEach((v,i) => {
+    map[`v${i}`] = document.getElementById(`vc_v${i}`)?.checked ?? true;
+    map[`v${i}_imp`] = parseFloat(document.getElementById(`vc_imp_v${i}`)?.value)||Number(v.importo||0);
+    (v.subvoci||[]).forEach((_s,si) => {
+      map[`v${i}_s${si}`] = document.getElementById(`vc_v${i}_s${si}`)?.checked ?? true;
+      map[`v${i}_s${si}_imp`] = parseFloat(document.getElementById(`vc_imp_v${i}_s${si}`)?.value)||Number(_s.importo||0);
+    });
+  });
+  return map;
+}
+function calcolaTotaleCommessaDaPrev(p) {
+  const vociSel = p.vociCommessa||{};
+  return (p.voci||[]).reduce((tot,v,i)=>{
+    let s = vociSel[`v${i}`]!==false ? (vociSel[`v${i}_imp`]!==undefined ? vociSel[`v${i}_imp`] : Number(v.importo||0)) : 0;
+    (v.subvoci||[]).forEach((_sv,si)=>{
+      if (vociSel[`v${i}_s${si}`]!==false) s += vociSel[`v${i}_s${si}_imp`]!==undefined ? vociSel[`v${i}_s${si}_imp`] : Number(_sv.importo||0);
+    });
+    return tot+s;
+  },0);
+}
+function onStatoPrevChange() {} // kept for compat
+
+function renderVociPrevModal() {
+  const list = document.getElementById('p-voci-list');
+  list.innerHTML = '';
+  let tot = 0;
+  _tmpVoci.forEach((v,i) => {
+    const sv = (v.subvoci||[]).map((s,si)=>
+      `<div class="subvoci-modal-item"><span class="sv-nm">${s.nome}</span><div style="display:flex;align-items:center;gap:6px"><span class="sv-im">€${Number(s.importo||0).toLocaleString('it-IT',{minimumFractionDigits:2})}</span><button class="btn-icon" style="font-size:.85rem" onclick="editSubvocePrevTmp(${i},${si})">✏️</button><button class="btn-icon" onclick="rimuoviSubvocePrevTmp(${i},${si})">✕</button></div></div>`
+    ).join('');
+    const subTot = (v.subvoci||[]).reduce((s,sv)=>s+Number(sv.importo||0),0);
+    tot += Number(v.importo||0) + subTot;
+    list.innerHTML += `<div class="voci-modal-item">
+      <div class="vm-header"><span class="vm-nome">${v.nome}</span><div style="display:flex;align-items:center;gap:6px"><span class="vm-imp">€${Number(v.importo||0).toLocaleString('it-IT',{minimumFractionDigits:2})}</span><button class="btn-icon" style="font-size:.85rem" onclick="editVocePrevTmp(${i})">✏️</button><button class="btn-icon" onclick="rimuoviVocePrevTmp(${i})">✕</button></div></div>
+      ${sv?`<div class="subvoci-modal">${sv}</div>`:''}
+    </div>`;
+  });
+  document.getElementById('p-totale-calc').textContent = '€'+tot.toLocaleString('it-IT',{minimumFractionDigits:2});
+}
+
+window.rimuoviVocePrevTmp     = function(i)     { _tmpVoci.splice(i,1); renderVociPrevModal(); };
+window.rimuoviSubvocePrevTmp  = function(i,si)  { _tmpVoci[i].subvoci.splice(si,1); renderVociPrevModal(); };
+
+// modal aggiungi/modifica voce
+let _voceEditIdx = null;
+let _tmpSubvoci  = [];
+let _editSubvoceIdx = null;
+window.apriModalAggiungiVoce = function() {
+  _voceEditIdx = null; _tmpSubvoci = [];
+  const sel = document.getElementById('vp-nome-sel');
+  sel.innerHTML = '<option value="">-- seleziona --</option>';
+  vociElenco.forEach(v => sel.innerHTML += `<option value="${v}">${v}</option>`);
+  document.getElementById('vp-importo').value = '';
+  document.getElementById('modal-voce-prev-title').textContent = 'Aggiungi voce';
+  document.getElementById('btn-salva-voce-prev').textContent = 'Aggiungi';
+  renderSubvociModal();
+  apriModal('modal-voce-prev');
+};
+window.editVocePrevTmp = function(i) {
+  _voceEditIdx = i;
+  _tmpSubvoci = JSON.parse(JSON.stringify(_tmpVoci[i].subvoci||[]));
+  const sel = document.getElementById('vp-nome-sel');
+  sel.innerHTML = '<option value="">-- seleziona --</option>';
+  vociElenco.forEach(v => sel.innerHTML += `<option value="${v}" ${v===_tmpVoci[i].nome?'selected':''}>${v}</option>`);
+  document.getElementById('vp-importo').value = _tmpVoci[i].importo||'';
+  document.getElementById('modal-voce-prev-title').textContent = 'Modifica voce';
+  document.getElementById('btn-salva-voce-prev').textContent = 'Salva';
+  renderSubvociModal();
+  apriModal('modal-voce-prev');
+};
+window.editSubvocePrevTmp = function(i,si) {
+  _editSubvoceIdx = {i,si};
+  const s = _tmpVoci[i].subvoci[si];
+  document.getElementById('esv-nome').value = s.nome||'';
+  document.getElementById('esv-importo').value = s.importo||'';
+  apriModal('modal-edit-subvoce');
+};
+window.salvaEditSubvoce = function() {
+  const nome = document.getElementById('esv-nome').value.trim(); if (!nome) return;
+  const imp = parseFloat(document.getElementById('esv-importo').value)||0;
+  const {i,si} = _editSubvoceIdx;
+  _tmpVoci[i].subvoci[si] = {nome,importo:imp};
+  chiudiModal('modal-edit-subvoce'); renderVociPrevModal();
+};
+
+window.onVoceSel = function() {};
+
+function renderSubvociModal() {
+  const list = document.getElementById('vp-subvoci-list');
+  list.innerHTML = '';
+  _tmpSubvoci.forEach((s,i) => {
+    list.innerHTML += `<div class="subvoci-modal-item"><span class="sv-nm">${s.nome}</span><div style="display:flex;gap:6px;align-items:center"><span class="sv-im">€${Number(s.importo||0).toLocaleString('it-IT',{minimumFractionDigits:2})}</span><button class="btn-icon" onclick="rimuoviSubvoceTmp(${i})">✕</button></div></div>`;
+  });
+}
+
+window.rimuoviSubvoceTmp = function(i) { _tmpSubvoci.splice(i,1); renderSubvociModal(); };
+
+window.aggiungiSubvocePrev = function() {
+  const nome = prompt('Nome sottovoce:');
+  if (!nome) return;
+  const imp = parseFloat(prompt('Importo (€):')||'0')||0;
+  _tmpSubvoci.push({nome,importo:imp});
+  renderSubvociModal();
+};
+
+window.salvaVocePrev = function() {
+  const nome = document.getElementById('vp-nome-sel').value;
+  const imp  = parseFloat(document.getElementById('vp-importo').value)||0;
+  if (!nome) { alert('Seleziona una voce'); return; }
+  if (_voceEditIdx !== null) {
+    _tmpVoci[_voceEditIdx] = {nome,importo:imp,subvoci:[..._tmpSubvoci]};
+  } else {
+    _tmpVoci.push({nome,importo:imp,subvoci:[..._tmpSubvoci]});
+  }
+  chiudiModal('modal-voce-prev');
+  renderVociPrevModal();
+};
+
+window.salvaPrev = async function() {
+  const titolo  = document.getElementById('p-titolo').value.trim();
+  const cliente = document.getElementById('p-cliente').value.trim();
+  if (!titolo) { alert('Inserisci il titolo'); return; }
+  const data   = document.getElementById('p-data').value;
+  const anno   = data ? parseInt(data.slice(0,4)) : annoCorrente;
+  const commId = document.getElementById('p-commessa').value ? parseInt(document.getElementById('p-commessa').value) : null;
+  const vociCommessa = commId ? _leggiVociCommessa() : {};
+  const scadenzaData = document.getElementById('p-scadenza').value||null;
+  const obj = { codice: document.getElementById('p-codice').value.trim(), titolo, cliente, data, anno, statoOff: document.getElementById('p-stato').value, note: document.getElementById('p-note').value.trim(), voci: _tmpVoci, commessaId: commId||null, vociCommessa, scadenzaData };
+  // Deseleziona commessa precedente se cambiata
+  if (editPrevId) {
+    const vecchio = preventivi.find(p=>p.id===editPrevId);
+    if (vecchio?.commessaId && vecchio.commessaId !== commId) {
+      const ci = commesse.findIndex(c=>c.id===vecchio.commessaId);
+      if (ci>=0) commesse[ci].prevCollegati = (commesse[ci].prevCollegati||[]).filter(id=>id!==editPrevId);
+    }
+    const i=preventivi.findIndex(p=>p.id===editPrevId); preventivi[i]={...preventivi[i],...obj};
+  } else {
+    preventivi.push({id:nextIdPrev++,...obj});
+  }
+  // Aggiorna prevCollegati nella commessa se assegnato
+  if (commId) {
+    const ci = commesse.findIndex(c=>c.id===commId);
+    if (ci>=0 && !(commesse[ci].prevCollegati||[]).includes(editPrevId||preventivi[preventivi.length-1].id))
+      commesse[ci].prevCollegati = [...(commesse[ci].prevCollegati||[]), editPrevId||preventivi[preventivi.length-1].id];
+  }
+  if (scadenzaData) _sincronizzaScadenzaDaOggetto('preventivo', editPrevId||preventivi[preventivi.length-1].id, scadenzaData, `Preventivo: ${titolo}`, cliente, commId);
+  chiudiModal('modal-prev'); await salvaDati(); render();
+};
+
+window.eliminaPrev = async function() {
+  if (!confirm('Eliminare questo preventivo?')) return;
+  preventivi=preventivi.filter(p=>p.id!==editPrevId);
+  prevAperto=null; chiudiModal('modal-prev'); await salvaDati(); render();
+};
+
+// ─── MODAL COMMESSA ──────────────────────────────────────────────────────
+window.apriModalComm = function(id) {
+  editCommId = id||null;
+  const c = id ? commesse.find(x=>x.id===id) : null;
+  _tmpFasi = c ? JSON.parse(JSON.stringify(c.fasi||[])) : [];
+  document.getElementById('modal-comm-title').textContent = c?'Modifica commessa':'Nuova commessa';
+  document.getElementById('c-codice').value   = c?.codice||'';
+  document.getElementById('c-titolo').value   = c?.titolo||'';
+  document.getElementById('c-cliente').value  = c?.cliente||'';
+  document.getElementById('c-stato').value    = c?.stato||'da-iniziare';
+  document.getElementById('c-ore-tot').value  = c?.oreTotali||'';
+  document.getElementById('c-scadenza').value = c?.scadenzaData||'';
+  document.getElementById('c-note').value     = c?.note||'';
+  document.getElementById('btn-del-comm').style.display = c?'block':'none';
+  // checkbox preventivi
+  const pc = document.getElementById('c-prev-checks');
+  pc.innerHTML = '';
+  preventivi.forEach(p => {
+    const chk = (c?.prevCollegati||[]).includes(p.id) ? 'checked' : '';
+    pc.innerHTML += `<label style="display:flex;align-items:center;gap:8px;padding:6px 0;font-size:.85rem">
+      <input type="checkbox" value="${p.id}" ${chk} style="width:auto"> ${p.codice||p.titolo} <span style="color:var(--muted);font-size:.75rem">(${p.cliente||'—'})</span>
+    </label>`;
+  });
+  // checkbox fatture
+  const fc = document.getElementById('c-fatt-checks');
+  fc.innerHTML = '';
+  fatture.forEach(f => {
+    const chk = ((c?.fattCollegate||[]).includes(f.id)||(f.commessaId===c?.id)) ? 'checked' : '';
+    fc.innerHTML += `<label style="display:flex;align-items:center;gap:8px;padding:6px 0;font-size:.85rem">
+      <input type="checkbox" value="${f.id}" ${chk} style="width:auto"> ${f.numero||f.id} <span style="color:var(--muted);font-size:.75rem">(${f.cliente||'—'} · €${Number(f.importo||0).toLocaleString('it-IT',{maximumFractionDigits:0})})</span>
+    </label>`;
+  });
+  renderFasiModal();
+  apriModal('modal-comm');
+};
+window.modificaComm = function(id) { apriModalComm(id); };
+
+function renderFasiModal() {
+  const list = document.getElementById('c-fasi-list');
+  list.innerHTML = '';
+  _tmpFasi.forEach((f,i) => {
+    const attHTML = (f.attivita||[]).map((a,ai)=>
+      `<div class="subvoci-modal-item"><span class="sv-nm">${a.nome}${a.ore?' · '+a.ore+'h':''}</span><div style="display:flex;gap:4px"><button class="btn-icon" onclick="editAttivTmp(${i},${ai})" style="font-size:.85rem">✏️</button><button class="btn-icon" onclick="rimuoviAttivTmp(${i},${ai})">✕</button></div></div>`
+    ).join('');
+    list.innerHTML += `<div class="voci-modal-item">
+      <div class="vm-header"><span class="vm-nome">${f.nome}${f.ore?' · '+f.ore+'h':''}</span><div style="display:flex;gap:6px"><button class="btn-icon" onclick="editFaseTmp(${i})" style="font-size:.85rem">✏️</button><button class="btn-icon" onclick="aggiungiAttivTmp(${i})">+</button><button class="btn-icon" onclick="rimuoviFaseTmp(${i})">✕</button></div></div>
+      ${f.desc?`<div style="font-size:.75rem;color:var(--muted);margin-top:3px">${f.desc}</div>`:''}
+      ${attHTML?`<div class="subvoci-modal">${attHTML}</div>`:''}
+    </div>`;
+  });
+}
+
+let _editFaseIdx = null, _editAttivFaseIdx = null, _editAttivIdx = null;
+
+window.aggiungiFaseModal = function() {
+  _editFaseIdx = null;
+  document.getElementById('modal-edit-fase-title').textContent = 'Nuova fase';
+  document.getElementById('ef-nome').value = '';
+  document.getElementById('ef-desc').value = '';
+  document.getElementById('ef-ore').value  = '';
+  apriModal('modal-edit-fase');
+};
+window.editFaseTmp = function(i) {
+  _editFaseIdx = i;
+  document.getElementById('modal-edit-fase-title').textContent = 'Modifica fase';
+  document.getElementById('ef-nome').value = _tmpFasi[i].nome||'';
+  document.getElementById('ef-desc').value = _tmpFasi[i].desc||'';
+  document.getElementById('ef-ore').value  = _tmpFasi[i].ore||'';
+  apriModal('modal-edit-fase');
+};
+window.salvaEditFase = function() {
+  const nome = document.getElementById('ef-nome').value.trim();
+  if (!nome) { alert('Inserisci il nome della fase'); return; }
+  const obj = {nome, desc:document.getElementById('ef-desc').value.trim(), ore:parseFloat(document.getElementById('ef-ore').value)||0};
+  if (_editFaseIdx !== null) { _tmpFasi[_editFaseIdx] = {..._tmpFasi[_editFaseIdx],...obj}; }
+  else _tmpFasi.push({...obj, attivita:[]});
+  chiudiModal('modal-edit-fase'); renderFasiModal();
+};
+window.rimuoviFaseTmp = function(i) { _tmpFasi.splice(i,1); renderFasiModal(); };
+window.aggiungiAttivTmp = function(i) {
+  _editAttivFaseIdx = i; _editAttivIdx = null;
+  document.getElementById('ea-nome').value = '';
+  document.getElementById('ea-ore').value  = '';
+  apriModal('modal-edit-attiv');
+};
+window.editAttivTmp = function(i, ai) {
+  _editAttivFaseIdx = i; _editAttivIdx = ai;
+  document.getElementById('ea-nome').value = _tmpFasi[i].attivita[ai].nome||'';
+  document.getElementById('ea-ore').value  = _tmpFasi[i].attivita[ai].ore||'';
+  apriModal('modal-edit-attiv');
+};
+window.salvaEditAttiv = function() {
+  const nome = document.getElementById('ea-nome').value.trim();
+  if (!nome) { alert('Inserisci il nome'); return; }
+  const obj = {nome, ore:parseFloat(document.getElementById('ea-ore').value)||0};
+  _tmpFasi[_editAttivFaseIdx].attivita = _tmpFasi[_editAttivFaseIdx].attivita||[];
+  if (_editAttivIdx !== null) _tmpFasi[_editAttivFaseIdx].attivita[_editAttivIdx] = obj;
+  else _tmpFasi[_editAttivFaseIdx].attivita.push(obj);
+  chiudiModal('modal-edit-attiv'); renderFasiModal();
+};
+window.rimuoviAttivTmp  = function(i,ai) { _tmpFasi[i].attivita.splice(ai,1); renderFasiModal(); };
+
+// Modifica fase/attività direttamente da dettaglio commessa (senza riaprire modal comm)
+window.apriEditFase = async function(fi) {
+  const c = commesse.find(x=>x.id===commAperta);
+  if (!c) return;
+  _editFaseIdx = fi; _tmpFasi = JSON.parse(JSON.stringify(c.fasi||[]));
+  document.getElementById('modal-edit-fase-title').textContent = 'Modifica fase';
+  document.getElementById('ef-nome').value = _tmpFasi[fi].nome||'';
+  document.getElementById('ef-desc').value = _tmpFasi[fi].desc||'';
+  document.getElementById('ef-ore').value  = _tmpFasi[fi].ore||'';
+  // Override salva per salvare subito
+  document.getElementById('modal-edit-fase').dataset.ctx = 'dettaglio';
+  apriModal('modal-edit-fase');
+};
+window.apriAddAttivSalvata = function(fi) {
+  const c = commesse.find(x=>x.id===commAperta);
+  if (!c) return;
+  _tmpFasi = JSON.parse(JSON.stringify(c.fasi||[]));
+  _editAttivFaseIdx = fi; _editAttivIdx = null;
+  document.getElementById('ea-nome').value = '';
+  document.getElementById('ea-ore').value  = '';
+  document.getElementById('modal-edit-attiv').dataset.ctx = 'dettaglio';
+  apriModal('modal-edit-attiv');
+};
+window.apriEditAttiv = function(fi, ai) {
+  const c = commesse.find(x=>x.id===commAperta);
+  if (!c) return;
+  _tmpFasi = JSON.parse(JSON.stringify(c.fasi||[]));
+  _editAttivFaseIdx = fi; _editAttivIdx = ai;
+  document.getElementById('ea-nome').value = _tmpFasi[fi].attivita[ai].nome||'';
+  document.getElementById('ea-ore').value  = _tmpFasi[fi].attivita[ai].ore||'';
+  document.getElementById('modal-edit-attiv').dataset.ctx = 'dettaglio';
+  apriModal('modal-edit-attiv');
+};
+window.rimuoviFaseSalvata = async function(fi) {
+  const c = commesse.find(x=>x.id===commAperta); if (!c) return;
+  const fasi = JSON.parse(JSON.stringify(c.fasi||[]));
+  fasi.splice(fi,1);
+  const ci = commesse.findIndex(x=>x.id===commAperta);
+  commesse[ci].fasi = fasi;
+  await salvaDati(); renderDettaglioComm();
+};
+window.rimuoviAttivSalvata = async function(fi, ai) {
+  const c = commesse.find(x=>x.id===commAperta); if (!c) return;
+  const fasi = JSON.parse(JSON.stringify(c.fasi||[]));
+  fasi[fi].attivita.splice(ai,1);
+  const ci = commesse.findIndex(x=>x.id===commAperta);
+  commesse[ci].fasi = fasi;
+  await salvaDati(); renderDettaglioComm();
+};
+// Patch salvaEditFase & salvaEditAttiv for dettaglio context
+const _origSalvaFase = window.salvaEditFase;
+window.salvaEditFase = async function() {
+  const ctx = document.getElementById('modal-edit-fase').dataset.ctx;
+  if (ctx === 'dettaglio') {
+    const nome = document.getElementById('ef-nome').value.trim(); if (!nome) return;
+    const c = commesse.find(x=>x.id===commAperta); if (!c) return;
+    const fasi = JSON.parse(JSON.stringify(c.fasi||[]));
+    fasi[_editFaseIdx] = {...fasi[_editFaseIdx], nome, desc:document.getElementById('ef-desc').value.trim(), ore:parseFloat(document.getElementById('ef-ore').value)||0};
+    commesse[commesse.findIndex(x=>x.id===commAperta)].fasi = fasi;
+    document.getElementById('modal-edit-fase').dataset.ctx = '';
+    chiudiModal('modal-edit-fase'); await salvaDati(); renderDettaglioComm(); return;
+  }
+  _origSalvaFase();
+};
+const _origSalvaAttiv = window.salvaEditAttiv;
+window.salvaEditAttiv = async function() {
+  const ctx = document.getElementById('modal-edit-attiv').dataset.ctx;
+  if (ctx === 'dettaglio') {
+    const nome = document.getElementById('ea-nome').value.trim(); if (!nome) return;
+    const c = commesse.find(x=>x.id===commAperta); if (!c) return;
+    const fasi = JSON.parse(JSON.stringify(c.fasi||[]));
+    const obj = {nome, ore:parseFloat(document.getElementById('ea-ore').value)||0};
+    fasi[_editAttivFaseIdx].attivita = fasi[_editAttivFaseIdx].attivita||[];
+    if (_editAttivIdx !== null) fasi[_editAttivFaseIdx].attivita[_editAttivIdx] = obj;
+    else fasi[_editAttivFaseIdx].attivita.push(obj);
+    commesse[commesse.findIndex(x=>x.id===commAperta)].fasi = fasi;
+    document.getElementById('modal-edit-attiv').dataset.ctx = '';
+    chiudiModal('modal-edit-attiv'); await salvaDati(); renderDettaglioComm(); return;
+  }
+  _origSalvaAttiv();
+};
+
+window.salvaComm = async function() {
+  const titolo = document.getElementById('c-titolo').value.trim();
+  if (!titolo) { alert('Inserisci il titolo'); return; }
+  const prevChecks = [...document.querySelectorAll('#c-prev-checks input[type=checkbox]:checked')].map(c=>parseInt(c.value));
+  const fattChecks = [...document.querySelectorAll('#c-fatt-checks input[type=checkbox]:checked')].map(c=>parseInt(c.value));
+  const scadenzaData = document.getElementById('c-scadenza').value||null;
+  const obj = { codice: document.getElementById('c-codice').value.trim(), titolo, cliente: document.getElementById('c-cliente').value.trim(), stato: document.getElementById('c-stato').value, oreTotali: parseFloat(document.getElementById('c-ore-tot').value)||0, note: document.getElementById('c-note').value.trim(), prevCollegati: prevChecks, fattCollegate: fattChecks, fasi: _tmpFasi, anno: annoCorrente, scadenzaData };
+  // Deseleziona preventivi e fatture rimossi dalla commessa
+  if (editCommId) {
+    const vecchia = commesse.find(c=>c.id===editCommId);
+    // preventivi rimossi
+    (vecchia?.prevCollegati||[]).forEach(pid => {
+      if (!prevChecks.includes(pid)) {
+        const pi = preventivi.findIndex(p=>p.id===pid);
+        if (pi>=0 && preventivi[pi].commessaId===editCommId) preventivi[pi].commessaId = null;
+      }
+    });
+    // preventivi aggiunti
+    prevChecks.forEach(pid => {
+      const pi = preventivi.findIndex(p=>p.id===pid);
+      if (pi>=0) preventivi[pi].commessaId = editCommId;
+    });
+    // fatture rimosse
+    (vecchia?.fattCollegate||[]).forEach(fid => {
+      if (!fattChecks.includes(fid)) {
+        const fi = fatture.findIndex(f=>f.id===fid);
+        if (fi>=0 && fatture[fi].commessaId===editCommId) fatture[fi].commessaId = null;
+      }
+    });
+    // fatture aggiunte
+    fattChecks.forEach(fid => {
+      const fi = fatture.findIndex(f=>f.id===fid);
+      if (fi>=0) fatture[fi].commessaId = editCommId;
+    });
+    const i=commesse.findIndex(c=>c.id===editCommId); commesse[i]={...commesse[i],...obj};
+  } else {
+    const newId = nextIdComm++;
+    commesse.push({id:newId,...obj});
+    prevChecks.forEach(pid=>{ const pi=preventivi.findIndex(p=>p.id===pid); if(pi>=0) preventivi[pi].commessaId=newId; });
+    fattChecks.forEach(fid=>{ const fi=fatture.findIndex(f=>f.id===fid); if(fi>=0) fatture[fi].commessaId=newId; });
+  }
+  if (scadenzaData) _sincronizzaScadenzaDaOggetto('commessa', editCommId||commesse[commesse.length-1].id, scadenzaData, `Commessa: ${titolo}`, document.getElementById('c-cliente').value.trim(), editCommId||commesse[commesse.length-1].id);
+  chiudiModal('modal-comm'); await salvaDati(); render();
+};
+window.eliminaComm = async function() {
+  if (!confirm('Eliminare questa commessa?')) return;
+  commesse=commesse.filter(c=>c.id!==editCommId);
+  commAperta=null; chiudiModal('modal-comm'); await salvaDati(); render();
+};
+
+// ─── MODAL UTILS ─────────────────────────────────────────────────────────
+function apriModal(id)   { document.getElementById(id).style.display='flex'; }
+window.chiudiModal = function(id) { document.getElementById(id).style.display='none'; };
+document.querySelectorAll('.modal-overlay').forEach(m => {
+  m.addEventListener('click', e => { if (e.target===m) chiudiModal(m.id); });
+});
+
+// ─── SYNC DOT ────────────────────────────────────────────────────────────
+function setSyncDot(s) {
+  const d = document.getElementById('sync-dot');
+  d.className = s==='ok'?'ok':s==='saving'?'saving':'';
+}
+
+// ─── VERSION CHECK ────────────────────────────────────────────────────────
+async function checkVersione() {
+  try {
+    const r = await fetch('version.json?t='+Date.now());
+    const j = await r.json();
+    if (j.version && j.version !== APP_VERSION) document.getElementById('banner-update').style.display='flex';
+  } catch(e){}
+}
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
+document.getElementById('app-version').textContent = 'v' + APP_VERSION;
+
+window.aggiornaApp = async function() {
+  if ('serviceWorker' in navigator) { const rs=await navigator.serviceWorker.getRegistrations(); for(const r of rs) await r.unregister(); const ks=await caches.keys(); for(const k of ks) await caches.delete(k); }
+  location.reload(true);
+};
+</script>
+</body>
+</html>
