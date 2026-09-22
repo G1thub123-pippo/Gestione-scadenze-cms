@@ -1,0 +1,13 @@
+{
+  "name": "Scadenze",
+  "short_name": "Scadenze",
+  "description": "Gestione scadenze e fatture",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f0f4f1",
+  "theme_color": "#2d6a4f",
+  "orientation": "portrait",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
